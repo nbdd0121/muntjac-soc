@@ -1,0 +1,6 @@
+[submodule "sdhci"]
+	path = sdhci
+	url = git@github.com:nbdd0121/sdhci.git
+[submodule "muntjac"]
+	path = muntjac
+	url = git@github.com:nbdd0121/munjtac.git
