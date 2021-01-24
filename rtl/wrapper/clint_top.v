@@ -25,6 +25,6 @@ module clint_top #(
     output wire [NUM_HARTS-1:0] mtip
 );
 
-    clint #(NUM_HARTS) clint (clk, rstn, bram_addr, bram_en, &bram_we, bram_rddata, bram_wrdata, timer_clk, msip, mtip);
+    clint #(NUM_HARTS, CLK_FREQ) clint (clk, rstn, bram_addr, bram_en, bram_we, bram_rddata, bram_wrdata, timer_clk, msip, mtip);
 
 endmodule
