@@ -8,9 +8,9 @@ module clint #(
     // We expose the control as a 64KiB BRAM.
     input  logic [15:0] bram_addr,
     input  logic        bram_en,
-    input  logic        bram_we,
-    output logic [31:0] bram_rddata,
-    input  logic [31:0] bram_wrdata,
+    input  logic [7:0]  bram_we,
+    output logic [63:0] bram_rddata,
+    input  logic [63:0] bram_wrdata,
 
     input logic timer_clk,
 
@@ -90,28 +90,26 @@ module clint #(
                 bram_rddata <= 0;
                 unique case (bram_addr[15:14])
                     2'b00: begin
-                        automatic logic [11:0] hart = bram_addr[13:2];
+                        automatic logic [11:0] hart = {bram_addr[13:3], 1'b0};
                         if (hart < NUM_HARTS) begin
                             bram_rddata <= msip[hart];
-                            if (bram_we) begin
+                            if (bram_we[0]) begin
                                 msip[hart] <= bram_wrdata[0];
+                            end
+                            if (bram_we[4]) begin
+                                msip[hart + 1] <= bram_wrdata[32];
                             end
                         end
                     end
                     2'b01, 2'b10: begin
                         automatic logic [11:0] hart = {bram_addr[15], bram_addr[13:3]};
                         if (hart == 4095) begin
-                            bram_rddata <= bram_addr[2] ? mtime[63:32] : mtime[31:0];
+                            bram_rddata <= mtime;
                         end
                         else if (hart < NUM_HARTS) begin
-                            bram_rddata <= bram_addr[2] ? mtimecmp[hart][63:32] : mtimecmp[hart][31:0];
-                            if (bram_we) begin
-                                if (bram_addr[2]) begin
-                                    mtimecmp[hart][63:32] <= bram_wrdata;
-                                end
-                                else begin
-                                    mtimecmp[hart][31:0] <= bram_wrdata;
-                                end
+                            bram_rddata <= mtimecmp[hart];
+                            if (|bram_we) begin
+                                mtimecmp[hart] <= bram_wrdata;
                             end
                         end
                     end

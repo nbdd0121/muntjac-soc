@@ -6,17 +6,17 @@ module clint_top #(
     input wire rstn,
 
     // We expose the control as a 64KiB BRAM.
-    (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME BRAM, MASTER_TYPE BRAM_CTRL, MEM_SIZE 65536, MEM_WIDTH 32, MEM_ECC NONE, READ_WRITE_MODE READ_WRITE, READ_LATENCY 1" *)
+    (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME BRAM, MASTER_TYPE BRAM_CTRL, MEM_SIZE 65536, MEM_WIDTH 64, MEM_ECC NONE, READ_WRITE_MODE READ_WRITE, READ_LATENCY 1" *)
     (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM ADDR" *)
     input  wire [15:0] bram_addr,
     (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM EN" *)
     input  wire        bram_en,
     (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM WE" *)
-    input  wire [3:0]  bram_we,
+    input  wire [7:0]  bram_we,
     (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM DOUT" *)
-    output wire [31:0] bram_rddata,
+    output wire [63:0] bram_rddata,
     (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM DIN" *)
-    input  wire [31:0] bram_wrdata,
+    input  wire [63:0] bram_wrdata,
 
     input wire timer_clk,
 
