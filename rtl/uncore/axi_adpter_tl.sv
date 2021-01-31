@@ -238,6 +238,11 @@ module axi_adapter_tl import tl_pkg::*; import axi_common::*; #(
   axi_req_t pending_q, pending_d;
   wire frag_t frag = fragment(pending_q);
 
+  logic last_req_write_q, last_req_write_d;
+
+  wire handle_write = axi_aw_valid && (!axi_ar_valid || !last_req_write_q);
+  wire handle_read = axi_ar_valid && (!axi_aw_valid || last_req_write_q);
+
   always_comb begin
     tl_a_valid = 1'b0;
     tl_a = 'x;
@@ -259,10 +264,11 @@ module axi_adapter_tl import tl_pkg::*; import axi_common::*; #(
     id_d = id_q;
     pending_d = pending_q;
     addr_sent_d = addr_sent_q;
+    last_req_write_d = last_req_write_q;
 
     unique case (state_q)
       StateIdle: begin
-        if (axi_aw_valid) begin
+        if (handle_write) begin
           axi_aw_ready = 1'b1;
           id_d = axi_aw_id;
           pending_d = '{
@@ -272,7 +278,8 @@ module axi_adapter_tl import tl_pkg::*; import axi_common::*; #(
             size: axi_aw_size
           };
           state_d = StatePut;
-        end else if (axi_ar_valid) begin
+          last_req_write_d = 1'b1;
+        end else if (handle_read) begin
           addr_sent_d = 1'b0;
           axi_ar_ready = 1'b1;
           id_d = axi_ar_id;
@@ -282,6 +289,7 @@ module axi_adapter_tl import tl_pkg::*; import axi_common::*; #(
             size: axi_ar_size
           };
           state_d = StateGet;
+          last_req_write_d = 1'b0;
         end
       end
 
@@ -368,12 +376,14 @@ module axi_adapter_tl import tl_pkg::*; import axi_common::*; #(
       id_q <= 'x;
       pending_q <= 'x;
       addr_sent_q <= 1'b0;
+      last_req_write_q <= 1'b0;
     end
     else begin
       state_q <= state_d;
       id_q <= id_d;
       pending_q <= pending_d;
       addr_sent_q <= addr_sent_d;
+      last_req_write_q <= last_req_write_d;
     end
 
 endmodule
