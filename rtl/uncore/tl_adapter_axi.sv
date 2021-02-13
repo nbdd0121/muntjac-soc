@@ -27,7 +27,9 @@ module tl_adapter_axi import tl_pkg::*; #(
   // We don't use channel B.
   assign tl.b_valid = 1'b0;
   assign tl.b_opcode = tl_b_op_e'('x);
+  assign tl.b_param = 'x;
   assign tl.b_size = 'x;
+  assign tl.b_address = 'x;
   assign tl.b_source = 'x;
   assign tl.b_mask = 'x;
   assign tl.b_corrupt = 'x;

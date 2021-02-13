@@ -43,7 +43,7 @@ module sdc #(
   // We expose the control as a 4MiB BRAM.
   (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME BRAM, MASTER_TYPE BRAM_CTRL, MEM_SIZE 4096, MEM_WIDTH 32, MEM_ECC NONE, READ_WRITE_MODE READ_WRITE, READ_LATENCY 1" *)
   (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM ADDR" *)
-  input  wire [11:0] bram_addr,
+  input  wire [7:0] bram_addr,
   (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM EN" *)
   input  wire        bram_en,
   (* X_INTERFACE_INFO = "xilinx.com:interface:bram:1.0 BRAM WE" *)
