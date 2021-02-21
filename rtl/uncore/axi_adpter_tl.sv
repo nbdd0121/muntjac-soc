@@ -17,29 +17,18 @@ module axi_adapter_tl import tl_pkg::*; import axi_common::*; #(
     input  logic       rst_ni,
 
     axi_channel.slave  axi,
-    tl_channel.host    tl
+
+  output logic `TL_H2D_PACKED(DataWidth, AddrWidth, SizeWidth, SourceWidth, SinkWidth) tl_h2d_o,
+  input  logic `TL_D2H_PACKED(DataWidth, AddrWidth, SizeWidth, SourceWidth, SinkWidth) tl_d2h_i
 );
 
   localparam int unsigned MaskWidth = DataWidth / 8;
-
-  initial begin
-    if (SourceWidth != tl.SourceWidth) begin
-      $fatal(1, "SourceWidth does not match");
-    end
-  end
 
   ////////////
   // Wiring //
   ////////////
 
-  tl_channel #(
-    .DataWidth(DataWidth),
-    .AddrWidth(AddrWidth),
-    .SizeWidth(SizeWidth),
-    .SourceWidth(SourceWidth),
-    .SinkWidth(SinkWidth)
-  ) tl_reg();
-
+  `TL_DECLARE(DataWidth, AddrWidth, SizeWidth, SourceWidth, SinkWidth, tl);
   tl_regslice #(
     .DataWidth(DataWidth),
     .AddrWidth(AddrWidth),
@@ -51,12 +40,11 @@ module axi_adapter_tl import tl_pkg::*; import axi_common::*; #(
   ) regslice (
     .clk_i,
     .rst_ni,
-    .host (tl_reg),
-    .device (tl)
+    .host_h2d_i (`TL_H2D_PACK(tl)),
+    .host_d2h_o (`TL_D2H_PACK(tl)),
+    .device_h2d_o (tl_h2d_o),
+    .device_d2h_i (tl_d2h_i)
   );
-
-  `TL_DECLARE(DataWidth, AddrWidth, SizeWidth, SourceWidth, SinkWidth, tl);
-  `TL_DEVICE_INTF(tl, tl_reg);
 
   // We don't use channel B, C, E.
   assign tl_b_ready = 1'b1;

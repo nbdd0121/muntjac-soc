@@ -1,3 +1,5 @@
+`include "tl_util.svh"
+
 module axi_tl_wrapper #(
     parameter ID_WIDTH      = 1,
     parameter SourceWidth   = 1,
@@ -89,13 +91,7 @@ module axi_tl_wrapper #(
         .DATA_WIDTH (DataWidth)
     ) mem(clk, rstn);
 
-    tl_channel #(
-        .SourceWidth (SourceWidth),
-        .SinkWidth (SinkWidth),
-        .AddrWidth (AddrWidth),
-        .DataWidth (DataWidth),
-        .SizeWidth (SizeWidth)
-    ) cache();
+    `TL_DECLARE(DataWidth, AddrWidth, SizeWidth, SourceWidth, SinkWidth, cache_ch);
 
     assign mem.aw_id        = mem_aw_id;
     assign mem.aw_addr      = mem_aw_addr;
@@ -144,48 +140,48 @@ module axi_tl_wrapper #(
     assign mem_r_valid  = mem.r_valid;
     assign mem.r_ready  = mem_r_ready;
 
-  assign cache.a_ready = cache_a_ready;
-  assign cache_a_valid = cache.a_valid;
-  assign cache_a_opcode = cache.a_opcode;
-  assign cache_a_param = cache.a_param;
-  assign cache_a_size = cache.a_size;
-  assign cache_a_source = cache.a_source;
-  assign cache_a_address = cache.a_address;
-  assign cache_a_mask = cache.a_mask;
-  assign cache_a_corrupt = cache.a_corrupt;
-  assign cache_a_data = cache.a_data;
-  assign cache_b_ready = cache.b_ready;
-  assign cache.b_valid = cache_b_valid;
-  assign cache.b_opcode = cache_b_opcode;
-  assign cache.b_param = cache_b_param;
-  assign cache.b_size = cache_b_size;
-  assign cache.b_source = cache_b_source;
-  assign cache.b_address = cache_b_address;
-  assign cache.b_mask = cache_b_mask;
-  assign cache.b_corrupt = cache_b_corrupt;
-  assign cache.b_data = cache_b_data;
-  assign cache.c_ready = cache_c_ready;
-  assign cache_c_valid = cache.c_valid;
-  assign cache_c_opcode = cache.c_opcode;
-  assign cache_c_param = cache.c_param;
-  assign cache_c_size = cache.c_size;
-  assign cache_c_source = cache.c_source;
-  assign cache_c_address = cache.c_address;
-  assign cache_c_corrupt = cache.c_corrupt;
-  assign cache_c_data = cache.c_data;
-  assign cache_d_ready = cache.d_ready;
-  assign cache.d_valid = cache_d_valid;
-  assign cache.d_opcode = cache_d_opcode;
-  assign cache.d_param = cache_d_param;
-  assign cache.d_size = cache_d_size;
-  assign cache.d_source = cache_d_source;
-  assign cache.d_sink = cache_d_sink;
-  assign cache.d_denied = cache_d_denied;
-  assign cache.d_corrupt = cache_d_corrupt;
-  assign cache.d_data = cache_d_data;
-  assign cache.e_ready = cache_e_ready;
-  assign cache_e_valid = cache.e_valid;
-  assign cache_e_sink = cache.e_sink;
+  assign cache_ch_a_ready = cache_a_ready;
+  assign cache_a_valid = cache_ch_a_valid;
+  assign cache_a_opcode = cache_ch_a.opcode;
+  assign cache_a_param = cache_ch_a.param;
+  assign cache_a_size = cache_ch_a.size;
+  assign cache_a_source = cache_ch_a.source;
+  assign cache_a_address = cache_ch_a.address;
+  assign cache_a_mask = cache_ch_a.mask;
+  assign cache_a_corrupt = cache_ch_a.corrupt;
+  assign cache_a_data = cache_ch_a.data;
+  assign cache_b_ready = cache_ch_b_ready;
+  assign cache_ch_b_valid = cache_b_valid;
+  assign cache_ch_b.opcode = tl_pkg::tl_b_op_e'(cache_b_opcode);
+  assign cache_ch_b.param = cache_b_param;
+  assign cache_ch_b.size = cache_b_size;
+  assign cache_ch_b.source = cache_b_source;
+  assign cache_ch_b.address = cache_b_address;
+  assign cache_ch_b.mask = cache_b_mask;
+  assign cache_ch_b.corrupt = cache_b_corrupt;
+  assign cache_ch_b.data = cache_b_data;
+  assign cache_ch_c_ready = cache_c_ready;
+  assign cache_c_valid = cache_ch_c_valid;
+  assign cache_c_opcode = cache_ch_c.opcode;
+  assign cache_c_param = cache_ch_c.param;
+  assign cache_c_size = cache_ch_c.size;
+  assign cache_c_source = cache_ch_c.source;
+  assign cache_c_address = cache_ch_c.address;
+  assign cache_c_corrupt = cache_ch_c.corrupt;
+  assign cache_c_data = cache_ch_c.data;
+  assign cache_d_ready = cache_ch_d_ready;
+  assign cache_ch_d_valid = cache_d_valid;
+  assign cache_ch_d.opcode = tl_pkg::tl_d_op_e'(cache_d_opcode);
+  assign cache_ch_d.param = cache_d_param;
+  assign cache_ch_d.size = cache_d_size;
+  assign cache_ch_d.source = cache_d_source;
+  assign cache_ch_d.sink = cache_d_sink;
+  assign cache_ch_d.denied = cache_d_denied;
+  assign cache_ch_d.corrupt = cache_d_corrupt;
+  assign cache_ch_d.data = cache_d_data;
+  assign cache_ch_e_ready = cache_e_ready;
+  assign cache_e_valid = cache_ch_e_valid;
+  assign cache_e_sink = cache_ch_e.sink;
 
     axi_adapter_tl #(
         .ID_WIDTH (ID_WIDTH),
@@ -194,5 +190,11 @@ module axi_tl_wrapper #(
         .AddrWidth (AddrWidth),
         .DataWidth (DataWidth),
         .SizeWidth (SizeWidth)
-    ) inst (clk, rstn, mem, cache);
+    ) inst (
+        .clk_i (clk),
+        .rst_ni (rstn),
+        .axi (mem),
+        .tl_h2d_o (`TL_H2D_PACK(cache_ch)),
+        .tl_d2h_i (`TL_D2H_PACK(cache_ch))
+    );
 endmodule
