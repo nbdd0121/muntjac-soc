@@ -24,15 +24,16 @@ module prim_flop
   input [Width-1:0] d_i,
   output logic [Width-1:0] q_o
 );
+  (*ASYNC_REG="true"*) logic [Width-1:0] q;
 
-  if (1) begin : gen_generic
-    prim_generic_flop #(
-      .ResetValue(ResetValue),
-      .Width(Width)
-    ) u_impl_generic (
-      .*
-    );
+  assign q_o = q;
 
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      q <= ResetValue;
+    end else begin
+      q <= d_i;
+    end
   end
 
 endmodule
