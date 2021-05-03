@@ -15,9 +15,10 @@ mod fmt;
 
 mod block;
 mod fs;
-mod io;
-mod net;
 mod hart_mask;
+mod io;
+mod iomem;
+mod net;
 
 #[allow(unused)]
 mod memtest;

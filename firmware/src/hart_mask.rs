@@ -6,10 +6,7 @@ pub struct HartMask {
 
 impl HartMask {
     pub fn new(mask: usize, mask_base: usize) -> Self {
-        Self {
-            mask,
-            mask_base
-        }
+        Self { mask, mask_base }
     }
 
     pub fn is_set(&self, hart_id: usize) -> bool {
