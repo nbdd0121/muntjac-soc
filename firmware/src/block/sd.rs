@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use crate::io::Result as IoResult;
+use crate::iomem::IoMem;
 use byteorder::{ByteOrder, LE};
-use core::ptr;
 use spin::Mutex;
 
 const BLK_SIZE: usize = 0x04;
@@ -23,7 +23,7 @@ const IRQ_ENABLE: usize = 0x34;
 const CAPABILITIES: usize = 0x40;
 
 pub struct Inner {
-    base: usize,
+    base: IoMem<0x80>,
     init: bool,
     ccs: bool,
     rca: u16,
@@ -32,7 +32,7 @@ pub struct Inner {
 impl Inner {
     pub const unsafe fn new(base: usize) -> Self {
         Self {
-            base,
+            base: IoMem::new(base),
             init: false,
             ccs: false,
             rca: 0,
@@ -45,16 +45,16 @@ impl Inner {
         self.rca = 0;
 
         // Reset controller
-        unsafe { ptr::write_volatile((self.base + SW_RESET) as *mut u8, 0b1) };
+        self.base.write_u8(SW_RESET, 0b1);
         loop {
-            let state = unsafe { ptr::read_volatile((self.base + SW_RESET) as *const u8) };
+            let state = self.base.read_u8(SW_RESET);
             if state & 0x7 == 0 {
                 break;
             }
         }
 
         let present = loop {
-            let state = unsafe { ptr::read_volatile((self.base + PRESENT_STATE) as *const u32) };
+            let state = self.base.read_u32(PRESENT_STATE);
             // Wait for Card State Stable to reach 1
             if state & 0x00020000 == 0x00020000 {
                 break state & 0x00010000 != 0;
@@ -65,7 +65,7 @@ impl Inner {
         }
         println!("SD Card present");
 
-        let cap = unsafe { ptr::read_volatile((self.base + CAPABILITIES) as *const u32) };
+        let cap = self.base.read_u32(CAPABILITIES);
 
         // Read base clock, must not be zero
         let base_clock = (cap >> 8) & 0b111111;
@@ -82,26 +82,16 @@ impl Inner {
         };
 
         // Turn on internal clock
-        unsafe {
-            ptr::write_volatile(
-                (self.base + CLOCK_CTRL) as *mut u16,
-                freq_select << 8 | 0b001,
-            )
-        }
+        self.base.write_u16(CLOCK_CTRL, freq_select << 8 | 0b001);
         // Wait for internal clock to stabilise
         loop {
-            let state = unsafe { ptr::read_volatile((self.base + CLOCK_CTRL) as *const u16) };
+            let state = self.base.read_u16(CLOCK_CTRL);
             if state & 0b10 != 0 {
                 break;
             }
         }
         // Turn on SD clock
-        unsafe {
-            ptr::write_volatile(
-                (self.base + CLOCK_CTRL) as *mut u16,
-                freq_select << 8 | 0b101,
-            )
-        }
+        self.base.write_u16(CLOCK_CTRL, freq_select << 8 | 0b101);
         println!("SD clock enabled");
 
         // Read base clock for timeout (in kHZ)
@@ -111,13 +101,13 @@ impl Inner {
         // Calculate the log2(divisor) to get 500ms
         let divisor = (32 - (base_clock * 1000 - 1).leading_zeros()).max(13);
         assert!(divisor <= 27);
-        unsafe { ptr::write_volatile((self.base + TIMEOUT_CTRL) as *mut u8, (divisor - 13) as u8) };
+        self.base.write_u8(TIMEOUT_CTRL, (divisor - 13) as u8);
 
         // Turn on IRQ statuses
-        unsafe { ptr::write_volatile((self.base + IRQ_ENABLE) as *mut u32, 0x03ff_01ff) };
+        self.base.write_u32(IRQ_ENABLE, 0x03ff_01ff);
 
         // Turn on SD power with voltage = 3.3V
-        unsafe { ptr::write_volatile((self.base + POWER_CTRL) as *mut u8, 0b1111) }
+        self.base.write_u8(POWER_CTRL, 0b1111);
         println!("SD power on");
 
         // Reset card
@@ -154,7 +144,7 @@ impl Inner {
             .expect("Cannot select card");
         // Wait for busy to deassert
         loop {
-            let state = unsafe { ptr::read_volatile((self.base + PRESENT_STATE) as *const u32) };
+            let state = self.base.read_u32(PRESENT_STATE);
             if state & 0b10 == 0 {
                 break;
             }
@@ -163,33 +153,33 @@ impl Inner {
         // Switch mode to 4-bit.
         self.wait_app_cmd(6, 0b10)
             .expect("Cannot switch to 4-bit mode");
-        unsafe { ptr::write_volatile((self.base + HOST_CTRL) as *mut u8, 0b10) };
+        self.base.write_u8(HOST_CTRL, 0b10);
         println!("4-bit mode switched");
 
-        unsafe { ptr::write_volatile((self.base + BLK_SIZE) as *mut u16, 512) };
+        self.base.write_u16(BLK_SIZE, 512);
 
         self.init = true;
     }
 
     pub fn power_off(&mut self) {
         // Reset controller
-        unsafe { ptr::write_volatile((self.base + SW_RESET) as *mut u8, 0b1) };
+        self.base.write_u8(SW_RESET, 0b1);
 
         self.init = false;
     }
 
     pub fn dump_core(&mut self) {
         for i in (0..256).step_by(4) {
-            let reg = unsafe { ptr::read_volatile((self.base + i) as *const u32) };
+            let reg = self.base.read_u32(i);
             println!("[{:2x}] = {:08x}", i, reg);
         }
     }
 
     fn check_err(&mut self) -> Result<(), u16> {
-        let irq = unsafe { ptr::read_volatile((self.base + IRQ_STATUS) as *const u32) };
+        let irq = self.base.read_u32(IRQ_STATUS);
         if irq & 0x8000 != 0 {
             // Clear IRQs
-            unsafe { ptr::write_volatile((self.base + IRQ_STATUS) as *mut u32, 0x03FF0000) };
+            self.base.write_u32(IRQ_STATUS, 0x03FF0000);
             Err((irq >> 16) as u16)
         } else {
             Ok(())
@@ -197,23 +187,19 @@ impl Inner {
     }
 
     fn wait_cmd_with_cfg(&mut self, index: u8, argument: u32, config: u8) -> Result<u32, u16> {
-        unsafe {
-            ptr::write_volatile((self.base + ARGUMENT) as *mut u32, argument);
-            ptr::write_volatile(
-                (self.base + CMD) as *mut u16,
-                (index as u16) << 8 | config as u16,
-            );
-        }
+        self.base.write_u32(ARGUMENT, argument);
+        self.base
+            .write_u16(CMD, (index as u16) << 8 | config as u16);
 
         loop {
-            let state = unsafe { ptr::read_volatile((self.base + PRESENT_STATE) as *const u32) };
+            let state = self.base.read_u32(PRESENT_STATE);
             if state & 0b1 == 0 {
                 break;
             }
         }
 
         self.check_err()?;
-        Ok(unsafe { ptr::read_volatile((self.base + RESPONSE) as *const u32) })
+        Ok(self.base.read_u32(RESPONSE))
     }
 
     fn wait_cmd(&mut self, index: u8, argument: u32) -> Result<u32, u16> {
@@ -255,7 +241,7 @@ impl Inner {
 
         // Wait for buffer to become available
         loop {
-            let state = unsafe { ptr::read_volatile((self.base + PRESENT_STATE) as *const u32) };
+            let state = self.base.read_u32(PRESENT_STATE);
             if state & (1 << 11) != 0 {
                 break;
             }
@@ -264,7 +250,7 @@ impl Inner {
 
         // Read data from buffer into data
         for chunk in data.chunks_exact_mut(4) {
-            let word = unsafe { ptr::read_volatile((self.base + BUFFER_PORT) as *const u32) };
+            let word = self.base.read_u32(BUFFER_PORT);
             LE::write_u32(chunk, word);
         }
 
@@ -276,7 +262,7 @@ impl Inner {
 
         // Wait for buffer to become available
         loop {
-            let state = unsafe { ptr::read_volatile((self.base + PRESENT_STATE) as *const u32) };
+            let state = self.base.read_u32(PRESENT_STATE);
             if state & (1 << 10) != 0 {
                 break;
             }
@@ -286,7 +272,7 @@ impl Inner {
         // Write data into buffer
         for chunk in data.chunks_exact(4) {
             let word = LE::read_u32(&chunk);
-            unsafe { ptr::write_volatile((self.base + BUFFER_PORT) as *mut u32, word) };
+            self.base.write_u32(BUFFER_PORT, word);
         }
 
         Ok(())
@@ -307,11 +293,11 @@ impl Inner {
         };
 
         if block_cnt != 1 {
-            unsafe { ptr::write_volatile((self.base + BLK_CNT) as *mut u16, block_cnt) };
-            unsafe { ptr::write_volatile((self.base + XFER_MODE) as *mut u16, 0b110110) };
+            self.base.write_u16(BLK_CNT, block_cnt);
+            self.base.write_u16(XFER_MODE, 0b110110);
             self.wait_cmd_with_cfg(18, arg, 0b00111010)?;
         } else {
-            unsafe { ptr::write_volatile((self.base + XFER_MODE) as *mut u16, 0b010000) };
+            self.base.write_u16(XFER_MODE, 0b010000);
             self.wait_cmd_with_cfg(17, arg, 0b00111010)?;
         }
 
@@ -321,7 +307,7 @@ impl Inner {
 
         // Wait for data transfer to complete
         loop {
-            let state = unsafe { ptr::read_volatile((self.base + PRESENT_STATE) as *const u32) };
+            let state = self.base.read_u32(PRESENT_STATE);
             if state & 0b10 == 0 {
                 break;
             }
@@ -346,11 +332,11 @@ impl Inner {
         };
 
         if block_cnt != 1 {
-            unsafe { ptr::write_volatile((self.base + BLK_CNT) as *mut u16, block_cnt) };
-            unsafe { ptr::write_volatile((self.base + XFER_MODE) as *mut u16, 0b100110) };
+            self.base.write_u16(BLK_CNT, block_cnt);
+            self.base.write_u16(XFER_MODE, 0b100110);
             self.wait_cmd_with_cfg(25, arg, 0b00111010)?;
         } else {
-            unsafe { ptr::write_volatile((self.base + XFER_MODE) as *mut u16, 0b000000) };
+            self.base.write_u16(XFER_MODE, 0b000000);
             self.wait_cmd_with_cfg(24, arg, 0b00111010)?;
         }
 
@@ -360,7 +346,7 @@ impl Inner {
 
         // Wait for data transfer to complete
         loop {
-            let state = unsafe { ptr::read_volatile((self.base + PRESENT_STATE) as *const u32) };
+            let state = self.base.read_u32(PRESENT_STATE);
             if state & 0b10 == 0 {
                 break;
             }
