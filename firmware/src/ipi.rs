@@ -1,7 +1,7 @@
 use super::address::{CLINT_BASE, MAX_HART_COUNT};
+use crate::hart_mask::HartMask;
 use core::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use spin::Mutex;
-use crate::hart_mask::HartMask;
 
 static HART_COUNT: AtomicUsize = AtomicUsize::new(0);
 

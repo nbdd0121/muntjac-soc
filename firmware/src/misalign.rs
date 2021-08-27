@@ -4,11 +4,11 @@ use super::{Context, TrapInfo};
 use riscv::Op;
 
 fn load_instruction(pc: usize) -> (u32, Op) {
-    let bits_lo = memory::load_u16_exec(pc);
+    let bits_lo = memory::load_u16_exec(pc).unwrap();
     let (bits, insn) = if bits_lo & 3 != 3 {
         (bits_lo as u32, riscv::decode_compressed(bits_lo))
     } else {
-        let bits = bits_lo as u32 | ((memory::load_u16_exec(pc + 2) as u32) << 16);
+        let bits = bits_lo as u32 | ((memory::load_u16_exec(pc + 2).unwrap() as u32) << 16);
         (bits, riscv::decode(bits))
     };
     (bits, insn)

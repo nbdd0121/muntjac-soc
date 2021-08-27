@@ -111,7 +111,7 @@ fn sbi_system_reset(reset_type: usize, reset_reason: usize) -> SbiResult {
         0 => panic!("shutdown"),
         1 => panic!("cold reboot"),
         2 => panic!("warm reboot"),
-        _ => Err(SbiError::InvalidParam)
+        _ => Err(SbiError::InvalidParam),
     }
 }
 

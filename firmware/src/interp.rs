@@ -10,7 +10,7 @@ macro_rules! trap {
         return Err(TrapInfo {
             cause: $cause,
             tval: $tval,
-        });
+        })
     };
 }
 

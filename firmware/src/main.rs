@@ -224,11 +224,11 @@ fn delegate_interrupt(ctx: &mut Context, trap: TrapInfo) {
 
 fn handle_illegal_insn(ctx: &mut Context) {
     trace!("Handle illegal insn  {:x}", ctx.pc);
-    let bits_lo = memory::load_u16_exec(ctx.pc);
+    let bits_lo = memory::load_u16_exec(ctx.pc).unwrap();
     let (bits, insn) = if bits_lo & 3 != 3 {
         (bits_lo as u32, riscv::decode_compressed(bits_lo))
     } else {
-        let bits = bits_lo as u32 | ((memory::load_u16_exec(ctx.pc + 2) as u32) << 16);
+        let bits = bits_lo as u32 | ((memory::load_u16_exec(ctx.pc + 2).unwrap() as u32) << 16);
         (bits, riscv::decode(bits))
     };
     match interp::step(ctx, &insn) {
@@ -309,38 +309,7 @@ extern "C" fn handle_interrupt_fast(cause: usize, ctx: &mut Context) -> bool {
             ctx.pc += 4;
         }
         // Page fault. We can only get these in memory::*.
-        13 | 15 => {
-            let mpp = (ctx.mstatus >> 11) & 3;
-            if mpp == 3 {
-                // Set a0 to 1 to signal a fault and skip over the wrong load
-                ctx.registers[10] = 1;
-                ctx.pc += 4;
-
-                let tval = unsafe {
-                    let v: usize;
-                    asm!("csrr {}, mtval", out(reg) v, options(nomem, nostack));
-                    v
-                };
-                println!("Page fault at {:x}", tval);
-            } else {
-                let tval = unsafe {
-                    let v: usize;
-                    asm!("csrr {}, mtval", out(reg) v, options(nomem, nostack));
-                    v
-                };
-                let mstatus = unsafe {
-                    let v: usize;
-                    asm!("csrr {}, mstatus", out(reg) v, options(nomem, nostack));
-                    v
-                };
-                println!(
-                    "cause={:x}, pc = {:x}, tval = {:x}, mstatus = {:x}",
-                    cause, ctx.pc, tval, mstatus
-                );
-                delegate_interrupt(ctx, TrapInfo { cause, tval });
-            }
-        }
-        0xC => {
+        12 | 13 | 15 => {
             let tval = unsafe {
                 let v: usize;
                 asm!("csrr {}, mtval", out(reg) v, options(nomem, nostack));
@@ -355,7 +324,7 @@ extern "C" fn handle_interrupt_fast(cause: usize, ctx: &mut Context) -> bool {
                 "cause={:x}, pc = {:x}, tval = {:x}, mstatus = {:x}",
                 cause, ctx.pc, tval, mstatus
             );
-            delegate_interrupt(ctx, TrapInfo { cause: 0xC, tval });
+            delegate_interrupt(ctx, TrapInfo { cause, tval });
         }
         _ => return false,
     }
@@ -405,6 +374,8 @@ fn indefinite_sleep() -> ! {
 
 #[no_mangle]
 extern "C" fn abort() -> ! {
-    ipi::run_on_hart(hart_mask::HartMask::new(usize::MAX, 0), &|| indefinite_sleep());
+    ipi::run_on_hart(hart_mask::HartMask::new(usize::MAX, 0), &|| {
+        indefinite_sleep()
+    });
     unreachable!();
 }

@@ -112,3 +112,9 @@ pub unsafe fn zeroed_slice<T>(len: usize) -> Box<[T]> {
     ptr::write_bytes(vec.as_mut_ptr(), 0, len);
     vec
 }
+
+pub fn view_as_u8_slice<T: ?Sized>(obj: &T) -> &[u8] {
+    unsafe {
+        core::slice::from_raw_parts(obj as *const T as *const u8, core::mem::size_of_val(obj))
+    }
+}
