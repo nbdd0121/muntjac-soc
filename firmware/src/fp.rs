@@ -2,7 +2,6 @@ use core::cell::RefCell;
 use riscv::{Csr, Op};
 use softfp::{self, F32, F64};
 
-use super::config::MAX_HART;
 #[cfg(rv64f = "none")]
 use super::memory::*;
 use super::{Context, TrapInfo};
@@ -21,24 +20,19 @@ struct FpState {
     effective_frm: u8,
 }
 
-fn fp_state() -> &'static RefCell<FpState> {
+hart_local! {
     #[cfg(rv64f = "none")]
-    static mut STATE: [RefCell<FpState>; MAX_HART] = repeat![
-        RefCell<FpState> => RefCell::new(FpState {
-            fpr: [0; 32],
-            fflags: 0,
-            frm: 0,
-            effective_frm: 0,
-            touched: false,
-        }); MAX_HART
-    ];
+    static FP_STATE: RefCell<FpState> = RefCell::new(FpState {
+        fpr: [0; 32],
+        fflags: 0,
+        frm: 0,
+        effective_frm: 0,
+        touched: false,
+    });
     #[cfg(rv64f = "mem")]
-    static mut STATE: [RefCell<FpState>; MAX_HART] = repeat![
-        RefCell<FpState> => RefCell::new(FpState {
-            effective_frm: 0,
-        }); MAX_HART
-    ];
-    unsafe { &STATE[super::hartid()] }
+    static FP_STATE: RefCell<FpState> = RefCell::new(FpState {
+        effective_frm: 0,
+    });
 }
 
 macro_rules! trap {
@@ -56,7 +50,7 @@ pub fn read_csr(ctx: &mut Context, csr: Csr) -> Result<usize, TrapInfo> {
         trap!(2, 0);
     }
 
-    let state = fp_state().borrow();
+    let state = FP_STATE.borrow();
 
     Ok(match csr {
         Csr::Fflags => state.fflags as usize,
@@ -73,7 +67,7 @@ pub fn write_csr(ctx: &mut Context, csr: Csr, value: usize) -> Result<(), TrapIn
     }
     ctx.mstatus |= 0x6000;
 
-    let mut state = fp_state().borrow_mut();
+    let mut state = FP_STATE.borrow_mut();
 
     match csr {
         Csr::Fflags => {
@@ -93,7 +87,7 @@ pub fn write_csr(ctx: &mut Context, csr: Csr, value: usize) -> Result<(), TrapIn
 
 #[cfg(rv64f = "none")]
 fn get_frm() -> u8 {
-    fp_state().borrow().frm
+    FP_STATE.borrow().frm
 }
 
 #[cfg(rv64f = "mem")]
@@ -116,7 +110,7 @@ unsafe fn get_fpr(idx: usize) -> u64 {
     if idx >= 32 {
         core::hint::unreachable_unchecked();
     }
-    fp_state().borrow().fpr[idx]
+    FP_STATE.borrow().fpr[idx]
 }
 
 #[cfg(rv64f = "none")]
@@ -124,18 +118,18 @@ unsafe fn set_fpr(idx: usize, reg: u64) {
     if idx >= 32 {
         core::hint::unreachable_unchecked();
     }
-    let mut state = fp_state().borrow_mut();
+    let mut state = FP_STATE.borrow_mut();
     state.fpr[idx] = reg;
     state.touched = true;
 }
 
 fn get_rounding_mode() -> softfp::RoundingMode {
-    unsafe { core::mem::transmute(fp_state().borrow().effective_frm as u32) }
+    unsafe { core::mem::transmute(FP_STATE.borrow().effective_frm as u32) }
 }
 
 #[cfg(rv64f = "none")]
 fn set_exception_flags(flags: softfp::ExceptionFlags) {
-    let mut state = fp_state().borrow_mut();
+    let mut state = FP_STATE.borrow_mut();
     state.fflags |= flags.bits() as u8;
     state.touched = true;
 }
@@ -289,7 +283,7 @@ pub fn step(ctx: &mut Context, op: &Op) -> Result<(), TrapInfo> {
     }
     macro_rules! set_rm {
         ($rm: expr) => {{
-            let mut state = fp_state().borrow_mut();
+            let mut state = FP_STATE.borrow_mut();
             state.effective_frm = if $rm == 0b111 { get_frm() >> 5 } else { $rm };
         }};
     }
@@ -302,7 +296,7 @@ pub fn step(ctx: &mut Context, op: &Op) -> Result<(), TrapInfo> {
     // Clear touched flag. We will use this flag to determine if any registers have been modified.
     #[cfg(rv64f = "none")]
     {
-        let mut state = fp_state().borrow_mut();
+        let mut state = FP_STATE.borrow_mut();
         state.touched = false;
     }
 
@@ -668,7 +662,7 @@ pub fn step(ctx: &mut Context, op: &Op) -> Result<(), TrapInfo> {
 
     #[cfg(rv64f = "none")]
     {
-        let mut state = fp_state().borrow_mut();
+        let mut state = FP_STATE.borrow_mut();
         if state.touched {
             ctx.mstatus |= 0x6000;
         }
