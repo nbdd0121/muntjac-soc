@@ -4,6 +4,7 @@ use smoltcp::phy::{self, Checksum, DeviceCapabilities};
 use smoltcp::time::Instant;
 use smoltcp::{Error, Result};
 
+use crate::iomem::IoMem;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::convert::TryInto;
@@ -85,8 +86,8 @@ unsafe fn zeroed_slice<T>(len: usize) -> Box<[T]> {
 }
 
 pub struct XilinxAxiEthernet {
-    eth_base: usize,
-    dma_base: usize,
+    eth_base: IoMem<0x1000>,
+    dma_base: IoMem<0x1000>,
     tx_desc: Box<[UnsafeCell<Descriptor>]>,
     rx_desc: Box<[UnsafeCell<Descriptor>]>,
     tx_used_ptr: usize,
@@ -125,8 +126,8 @@ impl XilinxAxiEthernet {
         }
 
         let mut ret = XilinxAxiEthernet {
-            eth_base,
-            dma_base,
+            eth_base: IoMem::new(eth_base),
+            dma_base: IoMem::new(dma_base),
             tx_desc,
             rx_desc,
             tx_used_ptr: 0,
@@ -137,43 +138,39 @@ impl XilinxAxiEthernet {
         ret.reset();
         ret.init(mac);
 
-        let mut ctrl = ptr::read_volatile((dma_base + DMA_MM2S_DMACR_OFFSET) as *const u32);
+        let mut ctrl = ret.dma_base.read_u32(DMA_MM2S_DMACR_OFFSET);
         ctrl = (ctrl & !DMA_CR_COALESCE_MASK) | (1 << DMA_CR_COALESCE_SHIFT);
         ctrl = (ctrl & !DMA_CR_DELAY_MASK) | (0 << DMA_CR_DELAY_SHIFT);
         ctrl |= DMA_IRQ_ALL;
-        ptr::write_volatile((dma_base + DMA_MM2S_DMACR_OFFSET) as *mut u32, ctrl);
+        ret.dma_base.write_u32(DMA_MM2S_DMACR_OFFSET, ctrl);
 
-        let mut ctrl = ptr::read_volatile((dma_base + DMA_S2MM_DMACR_OFFSET) as *const u32);
+        let mut ctrl = ret.dma_base.read_u32(DMA_S2MM_DMACR_OFFSET);
         ctrl = (ctrl & !DMA_CR_COALESCE_MASK) | (1 << DMA_CR_COALESCE_SHIFT);
         ctrl = (ctrl & !DMA_CR_DELAY_MASK) | (0 << DMA_CR_DELAY_SHIFT);
         ctrl |= DMA_IRQ_ALL;
-        ptr::write_volatile((dma_base + DMA_S2MM_DMACR_OFFSET) as *mut u32, ctrl);
+        ret.dma_base.write_u32(DMA_S2MM_DMACR_OFFSET, ctrl);
 
         // Set the current descriptor pointer to start of the ring
-        ptr::write_volatile(
-            (dma_base + DMA_MM2S_CURDESC_OFFSET) as *mut usize,
-            ret.tx_desc.as_ptr() as usize,
+        ret.dma_base.write_u64(
+            DMA_MM2S_CURDESC_OFFSET,
+            ret.tx_desc.as_ptr() as usize as u64,
         );
-        ptr::write_volatile(
-            (dma_base + DMA_S2MM_CURDESC_OFFSET) as *mut usize,
-            ret.rx_desc.as_ptr() as usize,
+        ret.dma_base.write_u64(
+            DMA_S2MM_CURDESC_OFFSET,
+            ret.rx_desc.as_ptr() as usize as u64,
         );
 
         // Run TX and RX DMA enigines.
-        let ctrl = ptr::read_volatile((dma_base + DMA_MM2S_DMACR_OFFSET) as *const u32);
-        ptr::write_volatile(
-            (dma_base + DMA_MM2S_DMACR_OFFSET) as *mut u32,
-            ctrl | DMA_CR_RUNSTOP,
-        );
-        let ctrl = ptr::read_volatile((dma_base + DMA_S2MM_DMACR_OFFSET) as *const u32);
-        ptr::write_volatile(
-            (dma_base + DMA_S2MM_DMACR_OFFSET) as *mut u32,
-            ctrl | DMA_CR_RUNSTOP,
-        );
+        let ctrl = ret.dma_base.read_u32(DMA_MM2S_DMACR_OFFSET);
+        ret.dma_base
+            .write_u32(DMA_MM2S_DMACR_OFFSET, ctrl | DMA_CR_RUNSTOP);
+        let ctrl = ret.dma_base.read_u32(DMA_S2MM_DMACR_OFFSET);
+        ret.dma_base
+            .write_u32(DMA_S2MM_DMACR_OFFSET, ctrl | DMA_CR_RUNSTOP);
 
         // Make RX engine ready for packets
-        ptr::write_volatile(
-            (dma_base + DMA_S2MM_TAILDESC_OFFSET) as *mut u64,
+        ret.dma_base.write_u64(
+            DMA_S2MM_TAILDESC_OFFSET,
             ret.rx_desc[ret.rx_desc.len() - 1].get() as usize as u64,
         );
 
@@ -181,110 +178,82 @@ impl XilinxAxiEthernet {
     }
 
     fn reset(&mut self) {
-        unsafe {
-            info!("Reset DMA");
-            // Set either MM2S_DMACR.Reset or S2MM.DMACR.Reset will reset the entire DMA engine (and ethernet).
-            ptr::write_volatile(
-                (self.dma_base + DMA_MM2S_DMACR_OFFSET) as *mut u32,
-                DMA_CR_RESET,
-            );
-            // TODO: Timeout
-            while ptr::read_volatile((self.dma_base + DMA_MM2S_DMACR_OFFSET) as *const u32)
-                & DMA_CR_RESET
-                != 0
-            {
-                // Sleep for a while maybe
-            }
-            info!("DMA resetted");
+        info!("Reset DMA");
+        // Set either MM2S_DMACR.Reset or S2MM.DMACR.Reset will reset the entire DMA engine (and ethernet).
+        self.dma_base.write_u32(DMA_MM2S_DMACR_OFFSET, DMA_CR_RESET);
+        // TODO: Timeout
+        while self.dma_base.read_u32(DMA_MM2S_DMACR_OFFSET) & DMA_CR_RESET != 0 {
+            // Sleep for a while maybe
         }
+        info!("DMA resetted");
     }
 
     fn init(&mut self, mac: [u8; 6]) {
-        unsafe {
-            // Disable RX and TX
-            ptr::write_volatile((self.eth_base + ETH_RCW1_OFFSET) as *mut u32, 0);
-            ptr::write_volatile((self.eth_base + ETH_TC_OFFSET) as *mut u32, 0);
+        // Disable RX and TX
+        self.eth_base.write_u32(ETH_RCW1_OFFSET, 0);
+        self.eth_base.write_u32(ETH_TC_OFFSET, 0);
 
-            // Disable ETH interrupt
-            ptr::write_volatile((self.eth_base + ETH_IE_OFFSET) as *mut u32, 0);
+        // Disable ETH interrupt
+        self.eth_base.write_u32(ETH_IE_OFFSET, 0);
 
-            // Enable flow control
-            ptr::write_volatile(
-                (self.eth_base + ETH_FCC_OFFSET) as *mut u32,
-                ETH_FCC_RX | ETH_FCC_TX,
-            );
+        // Enable flow control
+        self.eth_base
+            .write_u32(ETH_FCC_OFFSET, ETH_FCC_RX | ETH_FCC_TX);
 
-            self.set_mac_address(mac);
+        self.set_mac_address(mac);
 
-            ptr::write_volatile((self.eth_base + ETH_RCW1_OFFSET) as *mut u32, ETH_RCW1_RX);
-            ptr::write_volatile((self.eth_base + ETH_TC_OFFSET) as *mut u32, ETH_TC_TX);
-        }
+        self.eth_base.write_u32(ETH_RCW1_OFFSET, ETH_RCW1_RX);
+        self.eth_base.write_u32(ETH_TC_OFFSET, ETH_TC_TX);
     }
 
     fn stop(&mut self) {
-        unsafe {
-            // Disable RX and TX
-            ptr::write_volatile((self.eth_base + ETH_RCW1_OFFSET) as *mut u32, 0);
-            ptr::write_volatile((self.eth_base + ETH_TC_OFFSET) as *mut u32, 0);
+        // Disable RX and TX
+        self.eth_base.write_u32(ETH_RCW1_OFFSET, 0);
+        self.eth_base.write_u32(ETH_TC_OFFSET, 0);
 
-            let ctrl = ptr::read_volatile((self.dma_base + DMA_MM2S_DMACR_OFFSET) as *const u32);
-            ptr::write_volatile(
-                (self.dma_base + DMA_MM2S_DMACR_OFFSET) as *mut u32,
-                ctrl & !(DMA_CR_RUNSTOP | DMA_IRQ_ALL),
-            );
+        let ctrl = self.dma_base.read_u32(DMA_MM2S_DMACR_OFFSET);
+        self.dma_base.write_u32(
+            DMA_MM2S_DMACR_OFFSET,
+            ctrl & !(DMA_CR_RUNSTOP | DMA_IRQ_ALL),
+        );
 
-            let ctrl = ptr::read_volatile((self.dma_base + DMA_S2MM_DMACR_OFFSET) as *const u32);
-            ptr::write_volatile(
-                (self.dma_base + DMA_S2MM_DMACR_OFFSET) as *mut u32,
-                ctrl & !(DMA_CR_RUNSTOP | DMA_IRQ_ALL),
-            );
+        let ctrl = self.dma_base.read_u32(DMA_S2MM_DMACR_OFFSET);
+        self.dma_base.write_u32(
+            DMA_S2MM_DMACR_OFFSET,
+            ctrl & !(DMA_CR_RUNSTOP | DMA_IRQ_ALL),
+        );
 
-            for i in 0..=5 {
-                if ptr::read_volatile((self.dma_base + DMA_MM2S_DMASR_OFFSET) as *const u32)
-                    & DMA_SR_HALT
-                    != 0
-                {
-                    break;
-                }
-                if i != 5 {
-                    crate::timer::sleep(Duration::from_millis(20));
-                } else {
-                    warn!(target: "xae", "cannot bring TX DMA to stop");
-                }
+        for i in 0..=5 {
+            if self.dma_base.read_u32(DMA_MM2S_DMASR_OFFSET) & DMA_SR_HALT != 0 {
+                break;
             }
-            for i in 0..=5 {
-                if dbg!(ptr::read_volatile(
-                    (self.dma_base + DMA_S2MM_DMASR_OFFSET) as *const u32
-                )) & DMA_SR_HALT
-                    != 0
-                {
-                    break;
-                }
-                if i != 5 {
-                    crate::timer::sleep(Duration::from_millis(20));
-                } else {
-                    warn!(target: "xae", "cannot bring RX DMA to stop");
-                }
+            if i != 5 {
+                crate::timer::sleep(Duration::from_millis(20));
+            } else {
+                warn!(target: "xae", "cannot bring TX DMA to stop");
             }
-
-            self.reset();
         }
+        for i in 0..=5 {
+            if dbg!(self.dma_base.read_u32(DMA_S2MM_DMASR_OFFSET)) & DMA_SR_HALT != 0 {
+                break;
+            }
+            if i != 5 {
+                crate::timer::sleep(Duration::from_millis(20));
+            } else {
+                warn!(target: "xae", "cannot bring RX DMA to stop");
+            }
+        }
+
+        self.reset();
     }
 
     fn set_mac_address(&mut self, mac: [u8; 6]) {
-        unsafe {
-            ptr::write_volatile(
-                (self.eth_base + ETH_UAW0_OFFSET) as *mut u32,
-                (mac[0] as u32)
-                    | (mac[1] as u32) << 8
-                    | (mac[2] as u32) << 16
-                    | (mac[3] as u32) << 24,
-            );
-            ptr::write_volatile(
-                (self.eth_base + ETH_UAW1_OFFSET) as *mut u32,
-                (mac[4] as u32) | (mac[5] as u32) << 8,
-            );
-        }
+        self.eth_base.write_u32(
+            ETH_UAW0_OFFSET,
+            (mac[0] as u32) | (mac[1] as u32) << 8 | (mac[2] as u32) << 16 | (mac[3] as u32) << 24,
+        );
+        self.eth_base
+            .write_u32(ETH_UAW1_OFFSET, (mac[4] as u32) | (mac[5] as u32) << 8);
     }
 }
 
@@ -323,8 +292,7 @@ impl XilinxAxiEthernet {
     }
 
     pub fn handle_tx_irq(&mut self) {
-        let status =
-            unsafe { ptr::read_volatile((self.dma_base + DMA_MM2S_DMASR_OFFSET) as *const u32) };
+        let status = self.dma_base.read_u32(DMA_MM2S_DMASR_OFFSET);
 
         // Bogus IRQ
         if status & DMA_IRQ_ALL == 0 {
@@ -332,7 +300,7 @@ impl XilinxAxiEthernet {
         }
 
         // Clear IRQ bits
-        unsafe { ptr::write_volatile((self.dma_base + DMA_MM2S_DMASR_OFFSET) as *mut u32, status) };
+        self.dma_base.write_u32(DMA_MM2S_DMASR_OFFSET, status);
 
         if status & (DMA_IRQ_IOC | DMA_IRQ_DELAY) != 0 {
             loop {
@@ -355,8 +323,7 @@ impl XilinxAxiEthernet {
     }
 
     pub fn handle_rx_irq(&mut self) {
-        let status =
-            unsafe { ptr::read_volatile((self.dma_base + DMA_S2MM_DMASR_OFFSET) as *const u32) };
+        let status = self.dma_base.read_u32(DMA_S2MM_DMASR_OFFSET);
 
         // Bogus IRQ
         if status & DMA_IRQ_ALL == 0 {
@@ -364,7 +331,7 @@ impl XilinxAxiEthernet {
         }
 
         // Clear IRQ bits
-        unsafe { ptr::write_volatile((self.dma_base + DMA_S2MM_DMASR_OFFSET) as *mut u32, status) };
+        self.dma_base.write_u32(DMA_S2MM_DMASR_OFFSET, status);
 
         if status & (DMA_IRQ_IOC | DMA_IRQ_DELAY) != 0 {}
 
@@ -375,13 +342,13 @@ impl XilinxAxiEthernet {
 }
 
 pub struct RxToken<'a> {
-    dma_base: usize,
+    dma_base: IoMem<0x1000>,
     desc: &'a mut Descriptor,
     rx_ptr: &'a mut usize,
 }
 
 pub struct TxToken<'a> {
-    dma_base: usize,
+    dma_base: IoMem<0x1000>,
     desc: &'a mut Descriptor,
     tx_ptr: &'a mut usize,
 }
@@ -428,12 +395,10 @@ impl<'a> phy::RxToken for RxToken<'a> {
 
         // Cleanup the descriptor and add it back to the RX available ring
         self.desc.status = 0;
-        unsafe {
-            ptr::write(
-                (self.dma_base + DMA_S2MM_TAILDESC_OFFSET) as *mut u64,
-                self.desc as *mut Descriptor as usize as u64,
-            );
-        }
+        self.dma_base.write_u64(
+            DMA_S2MM_TAILDESC_OFFSET,
+            self.desc as *mut Descriptor as usize as u64,
+        );
         *self.rx_ptr += 1;
 
         result
@@ -451,12 +416,10 @@ impl<'a> phy::TxToken for TxToken<'a> {
 
         // Prepare the descriptor and send out
         self.desc.control = length as u32 | DMA_DESC_CR_TXSOF | DMA_DESC_CR_TXEOF;
-        unsafe {
-            ptr::write(
-                (self.dma_base + DMA_MM2S_TAILDESC_OFFSET) as *mut u64,
-                self.desc as *mut Descriptor as usize as u64,
-            );
-        }
+        self.dma_base.write_u64(
+            DMA_MM2S_TAILDESC_OFFSET,
+            self.desc as *mut Descriptor as usize as u64,
+        );
         *self.tx_ptr += 1;
 
         result
