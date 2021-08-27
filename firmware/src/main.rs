@@ -2,11 +2,14 @@
 #![no_main]
 #![feature(asm)]
 #![feature(default_alloc_error_handler)]
+#![feature(core_intrinsics)]
 
 #[macro_use]
 extern crate alloc;
 #[macro_use]
 extern crate log;
+extern crate unwind;
+extern crate compiler_builtins_local;
 
 #[macro_use]
 mod util;
@@ -19,6 +22,7 @@ mod hart_mask;
 mod io;
 mod iomem;
 mod net;
+mod panic;
 
 #[allow(unused)]
 mod memtest;

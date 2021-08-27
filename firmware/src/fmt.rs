@@ -93,9 +93,3 @@ pub fn logger_init() {
     log::set_logger(&Logger).unwrap();
     log::set_max_level(log::LevelFilter::Trace);
 }
-
-#[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    println!("{}", info);
-    super::abort();
-}

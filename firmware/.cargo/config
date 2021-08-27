@@ -1,0 +1,11 @@
+[build]
+target = "riscv64imac-unknown-none-elf"
+rustflags = ["-Clink-args=-Tlinker.ld", "-Cpanic=unwind"]
+
+[unstable]
+build-std = ["core", "alloc"]
+# Ensure the local build of compiler-builtins is used
+build-std-features = ["compiler-builtins-mangled-names"]
+
+[target.riscv64imac-unknown-none-elf]
+linker = "riscv64-unknown-elf-ld"

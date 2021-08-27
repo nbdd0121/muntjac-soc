@@ -14,6 +14,7 @@ SECTIONS
   /* Read-only sections, merged into text segment: */
   . = ${MEMORY_LIMIT} - 0x200000;
 
+
   .interp         : { *(.interp) }
   .note.gnu.build-id  : { *(.note.gnu.build-id) }
   .hash           : { *(.hash) }
@@ -25,6 +26,7 @@ SECTIONS
   .gnu.version_r  : { *(.gnu.version_r) }
 
   __text_start = .;
+  __executable_start = .;
   .text.start : { *(.text.start) }
 
   .text           :
@@ -47,7 +49,8 @@ SECTIONS
     *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
   }
   .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) }
-  .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
+  . = ALIGN(64 / 8);
+  PROVIDE (__eh_frame = .);
   .eh_frame       : { KEEP (*(.eh_frame)) *(.eh_frame.*) }
   .gcc_except_table   : { *(.gcc_except_table .gcc_except_table.*) }
   .gnu_extab   : { *(.gnu_extab*) }
