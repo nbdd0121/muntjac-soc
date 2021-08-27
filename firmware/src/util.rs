@@ -19,6 +19,34 @@ macro_rules! repeat {
     }};
 }
 
+pub struct HartLocalKey<T: 'static> {
+    #[doc(hidden)]
+    pub storage: &'static [T; crate::address::MAX_HART_COUNT],
+}
+
+unsafe impl<T: 'static> Sync for HartLocalKey<T> {}
+
+impl<T: 'static> core::ops::Deref for HartLocalKey<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.storage[crate::hartid()]
+    }
+}
+
+macro_rules! hart_local {
+    () => {};
+    ($(#[$attr:meta])* $vis:vis static $name:ident: $t:ty = $init:expr; $($rest:tt)*) => (
+        $(#[$attr])* $vis static $name: $crate::util::HartLocalKey<$t> = {
+            static mut STORAGE: [$t; $crate::address::MAX_HART_COUNT] = repeat![$t => $init; $crate::address::MAX_HART_COUNT];
+            $crate::util::HartLocalKey {
+                storage: unsafe { &STORAGE },
+            }
+        };
+        hart_local!($($rest)*);
+    );
+}
+
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::ptr;
