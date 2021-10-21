@@ -1,15 +1,15 @@
 #![no_std]
 #![no_main]
 #![feature(asm)]
+#![feature(thread_local)]
 #![feature(default_alloc_error_handler)]
-#![feature(core_intrinsics)]
 
 #[macro_use]
 extern crate alloc;
 #[macro_use]
 extern crate log;
-extern crate unwind;
 extern crate compiler_builtins_local;
+extern crate unwinding;
 
 #[macro_use]
 mod util;
@@ -27,7 +27,6 @@ mod panic;
 #[allow(unused)]
 mod memtest;
 
-#[cfg(not(rv64f = "full"))]
 mod fp;
 
 #[allow(unused)]
@@ -86,9 +85,6 @@ extern "C" fn main(boot: bool) -> usize {
         uart::uart_init();
         fmt::logger_init();
 
-        #[cfg(not(rv64f = "full"))]
-        fp::init_fp();
-
         // Set baud to 230,400 8N1
         // 18.432M / (16 * 230,400) = 5
         uart::uart_set_mode(uart::Config {
@@ -97,6 +93,8 @@ extern "C" fn main(boot: bool) -> usize {
         });
 
         println!("Booting...");
+
+        fp::init_fp();
 
         // Probe number of harts available
         ipi::probe_hart_count();

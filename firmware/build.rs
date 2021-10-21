@@ -3,13 +3,6 @@ use std::fs;
 use std::io::Result as IoResult;
 use std::process::Command;
 
-#[allow(unused)]
-enum RV64FType {
-    None,
-    Mem,
-    Full,
-}
-
 include!("platform.rs");
 
 const MEMORY_LIMIT: u64 = MEMORY_BASE + MEMORY_SIZE;
@@ -27,14 +20,6 @@ fn main() -> IoResult<()> {
         MEMORY_BASE, MEMORY_LIMIT,
     );
     fs::write(format!("{}/platform.h", out_dir), platform_h).unwrap();
-
-    // RV64F cfg
-    let rv64f = match RV64F {
-        RV64FType::None => "none",
-        RV64FType::Mem => "mem",
-        RV64FType::Full => "full",
-    };
-    println!("cargo:rustc-cfg=rv64f=\"{}\"", rv64f);
 
     // Generate the linker script
     println!("cargo:rerun-if-changed=linker.tpl.ld");
@@ -58,10 +43,6 @@ fn main() -> IoResult<()> {
     let mut cc = cc::Build::new();
     println!("cargo:rerun-if-changed=src/entry.S");
     cc.file("src/entry.S");
-    if let RV64FType::Mem = RV64F {
-        println!("cargo:rerun-if-changed=src/fpr.s");
-        cc.file("src/fpr.s");
-    }
     cc.include(out_dir).compile("foo");
 
     Ok(())

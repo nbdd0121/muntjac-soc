@@ -2,7 +2,7 @@
 name = "bootloader"
 version = "0.1.0"
 authors = ["Gary Guo <gary@garyguo.net>"]
-edition = "2018"
+edition = "2021"
 
 [build-dependencies]
 cc = "1"
@@ -10,7 +10,7 @@ cc = "1"
 [dependencies]
 byteorder = { version = "1", default-features = false }
 arrayvec = { version = "0.5", default-features = false }
-softfp = { git = "ssh://git@github.com/nbdd0121/r2vm.git" }
+softfp = { version = "0.1.0", default-features = false }
 riscv = { git = "ssh://git@github.com/nbdd0121/r2vm.git" }
 spin = "0.7"
 log = { version = "0.4", default-features = false }
@@ -21,6 +21,11 @@ unwinding = { version = "0.1.1", default-features = false, features = ["unwinder
 [patch.crates-io]
 unwinding = { git = "https://github.com/nbdd0121/unwinding.git", rev = "9741d8a1774349e5b714df6c3344f7a7d94b7b46" }
 gimli = { git = "https://github.com/gimli-rs/gimli.git", rev = "7a3aeef78d169b39e15e18f1573492c501b25c68" }
+
+[features]
+fp-mem = []
+fp-none = ["fp-mem"]
+default = ["fp-none"]
 
 [profile.release]
 opt-level = 2
