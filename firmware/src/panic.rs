@@ -4,10 +4,11 @@ use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
 use unwinding::{abi::*, panicking};
 
-hart_local! {
-    static PANIC_COUNT: Cell<usize> = Cell::new(0);
-    static EXCEPTION_STORAGE: UnsafeCell<MaybeUninit<UnwindException>> = UnsafeCell::new(MaybeUninit::uninit());
-}
+#[thread_local]
+static PANIC_COUNT: Cell<usize> = Cell::new(0);
+
+#[thread_local]
+static EXCEPTION_STORAGE: UnsafeCell<MaybeUninit<UnwindException>> = UnsafeCell::new(MaybeUninit::uninit());
 
 fn stack_trace() {
     struct CallbackData {

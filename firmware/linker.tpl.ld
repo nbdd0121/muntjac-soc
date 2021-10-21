@@ -55,7 +55,25 @@ SECTIONS
   .gcc_except_table   : { *(.gcc_except_table .gcc_except_table.*) }
   .gnu_extab   : { *(.gnu_extab*) }
 
-  . = ALIGN(64 / 8);
+  . = ALIGN(8);
+
+  /* Thread Local Storage sections  */
+  .tdata :
+  {
+    __tdata_start = .;
+    *(.tdata .tdata.* .gnu.linkonce.td.*)
+    . = ALIGN(8);
+    __tdata_end = .;
+  }
+  .tbss :
+  {
+    *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon)
+    . = ALIGN(8);
+    __tbss_end = .;
+  }
+
+  . = ALIGN(8);
+
   __data_loc = .;
 
   /* DATA SECTIONS */

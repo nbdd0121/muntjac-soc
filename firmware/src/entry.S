@@ -90,13 +90,44 @@ _start:
     jr t0
 
 .relocated_start:
-    la gp, __global_pointer$
-.option pop
-
-    # Setup the firmware stack
+    # Setup the firmware stack and thread pointer
+    # The stack pointer will grow down and thread pointer will grow up
     li sp, MEMORY_LIMIT
     slli t0, s0, 14
     sub sp, sp, t0
+
+    la t0, __tdata_start
+    la t1, __tdata_end
+    la t2, __tbss_end
+
+    # Subtract the size needed for TLS (aligned to 16 bytes)
+    sub t3, t2, t0
+    sub tp, sp, t3
+    and tp, tp, ~15
+    mv  sp, tp
+
+    # Copy TDATA
+    mv  t4, tp
+    bge t0, t1, 2f
+1:
+    ld a5, 0(t0)
+    sd a5, 0(t4)
+    addi t0, t0, 8
+    addi t4, t4, 8
+    blt t0, t1, 1b
+2:
+    # Clear TBSS
+    bge t0, t2, 4f
+3:
+    sd x0, 0(t4)
+    addi t0, t0, 8
+    addi t4, t4, 8
+    blt t0, t2, 3b
+4:
+
+    la gp, __global_pointer$
+.option pop
+
     csrw mscratch, sp
 
     # Setup interrupt handler
@@ -147,9 +178,10 @@ handler:
 
     addi sp, sp, -256-16
 
-    # Save volatile GPRs and gp
+    # Save volatile GPRs and gp, tp
     sd x1, 1 * 8(sp)
     sd x3, 3 * 8(sp)
+    sd x4, 4 * 8(sp)
     sd x5, 5 * 8(sp)
     sd x6, 6 * 8(sp)
     sd x7, 7 * 8(sp)
@@ -172,6 +204,7 @@ handler:
 
 .option push
 .option norelax
+    addi tp, sp, 256+16
     la gp, __global_pointer$
 .option pop
 
@@ -190,7 +223,6 @@ handler:
 
     # Save all other GPRs
     sd x0, 0 * 8(sp)
-    sd x4, 4 * 8(sp)
     sd x8, 8 * 8(sp)
     sd x9, 9 * 8(sp)
     sd x18, 18 * 8(sp)
@@ -208,8 +240,7 @@ handler:
     mv a1, sp
     call handle_interrupt
 
-    # Restore non-volatile GPR, except SP
-    ld x4, 4 * 8(sp)
+    # Restore non-volatile GPR, except SP, GP, TP
     ld x8, 8 * 8(sp)
     ld x9, 9 * 8(sp)
     ld x18, 18 * 8(sp)
@@ -240,9 +271,10 @@ handler:
     csrw mscratch, t0
 1:
 
-    # Restore volatile GPRs and GP
+    # Restore volatile GPRs and GP, TP
     ld x1, 1 * 8(sp)
     ld x3, 3 * 8(sp)
+    ld x4, 4 * 8(sp)
     ld x5, 5 * 8(sp)
     ld x6, 6 * 8(sp)
     ld x7, 7 * 8(sp)
