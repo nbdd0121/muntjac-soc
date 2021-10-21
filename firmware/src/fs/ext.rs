@@ -167,7 +167,7 @@ mod sys {
     }
 }
 
-use crate::io::{Error, Result as IoResult};
+use crate::io::{Error, Result as IoResult, Read, ReadAt};
 use crate::util::OnceCell;
 use crate::{block::Block, util::uninit_slice};
 use alloc::boxed::Box;
@@ -199,8 +199,10 @@ impl<'a> File<'a> {
     pub fn size(&self) -> u64 {
         (self.inode.size_high as u64) << 32 | self.inode.size_lo as u64
     }
+}
 
-    pub fn read_at(&mut self, mut buf: &mut [u8], offset: u64) -> IoResult<usize> {
+impl ReadAt for File<'_> {
+    fn read_at(&mut self, mut buf: &mut [u8], offset: u64) -> IoResult<usize> {
         let limit = offset + buf.len() as u64;
 
         // Cap the buf size within limit.
@@ -218,27 +220,13 @@ impl<'a> File<'a> {
 
         return Ok(buf.len());
     }
+}
 
-    pub fn read_exact_at(&mut self, mut buf: &mut [u8], mut offset: u64) -> IoResult<()> {
-        while !buf.is_empty() {
-            let size = self.read_at(buf, offset)?;
-            assert_ne!(size, 0, "early eof");
-            buf = &mut buf[size..];
-            offset += size as u64;
-        }
-        Ok(())
-    }
-
-    pub fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
+impl Read for File<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
         let size = self.read_at(buf, self.ptr)?;
         self.ptr += size as u64;
         Ok(size)
-    }
-
-    pub fn read_exact(&mut self, buf: &mut [u8]) -> IoResult<()> {
-        self.read_exact_at(buf, self.ptr)?;
-        self.ptr += buf.len() as u64;
-        Ok(())
     }
 }
 

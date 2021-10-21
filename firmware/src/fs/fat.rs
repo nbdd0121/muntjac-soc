@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::block::Block;
-use crate::io::Result;
+use crate::io::{Read, Result};
 use alloc::sync::Arc;
 use byteorder::{ByteOrder, LE};
 
@@ -48,8 +48,10 @@ impl<'a> File<'a> {
     pub fn size(&self) -> u64 {
         self.size as u64
     }
+}
 
-    pub fn read(&mut self, mut buf: &mut [u8]) -> Result<usize> {
+impl Read for File<'_> {
+    fn read(&mut self, mut buf: &mut [u8]) -> Result<usize> {
         // Make sure size is the cap.
         if buf.len() > self.size {
             buf = &mut buf[..self.size];
@@ -116,15 +118,6 @@ impl<'a> File<'a> {
         self.pointer = buf.len();
         self.size -= buf.len();
         return Ok(buf.len());
-    }
-
-    pub fn read_exact(&mut self, mut buf: &mut [u8]) -> Result<()> {
-        while buf.len() > 0 {
-            let size = self.read(buf)?;
-            assert_ne!(size, 0, "early eof");
-            buf = &mut buf[size..];
-        }
-        Ok(())
     }
 }
 
