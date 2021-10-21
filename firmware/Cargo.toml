@@ -11,12 +11,15 @@ cc = "1"
 byteorder = { version = "1", default-features = false }
 arrayvec = { version = "0.5", default-features = false }
 softfp = { version = "0.1.0", default-features = false }
-riscv = { git = "ssh://git@github.com/nbdd0121/r2vm.git" }
+riscv = { git = "https://github.com/nbdd0121/r2vm.git" }
 spin = "0.7"
 log = { version = "0.4", default-features = false }
 smoltcp = { version = "0.7", default-features = false, features = ["alloc", "ethernet", "socket-tcp", "socket-udp", "proto-ipv4", "proto-ipv6", "async"] }
-compiler_builtins_local = { path = "../../compiler-builtins", package = "compiler_builtins" }
+compiler_builtins_local = { version = "0.1.50", package = "compiler_builtins" }
 unwinding = { version = "0.1.1", default-features = false, features = ["unwinder", "personality", "fde-gnu-eh-frame-hdr", "panicking"] }
+miniz_oxide = "0.4.4"
+crc32fast = { version = "1.2", default-features = false }
+bitflags = "1"
 
 [patch.crates-io]
 unwinding = { git = "https://github.com/nbdd0121/unwinding.git", rev = "9741d8a1774349e5b714df6c3344f7a7d94b7b46" }
