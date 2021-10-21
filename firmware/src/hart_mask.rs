@@ -21,4 +21,12 @@ impl HartMask {
             }
         }
     }
+
+    pub fn normalize(&self) -> usize {
+        let mut ret = 0;
+        for i in 0..4 {
+            ret |= (self.is_set(i) as usize) << i;
+        }
+        ret
+    }
 }

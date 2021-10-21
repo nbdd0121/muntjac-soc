@@ -1,6 +1,5 @@
 use riscv::{Csr, Op};
 
-#[cfg(not(rv64f = "full"))]
 use super::fp;
 use super::Context;
 use super::TrapInfo;
@@ -18,7 +17,7 @@ macro_rules! trap {
 fn read_csr(ctx: &mut Context, csr: Csr) -> Result<usize, TrapInfo> {
     Ok(match csr {
         Csr::Time => super::timer::time_u64() as usize,
-        #[cfg(rv64f = "none")]
+        #[cfg(feature = "fp-mem")]
         Csr::Fflags | Csr::Frm | Csr::Fcsr => return fp::read_csr(ctx, csr),
         _ => trap!(2, 0),
     })
@@ -26,7 +25,7 @@ fn read_csr(ctx: &mut Context, csr: Csr) -> Result<usize, TrapInfo> {
 
 fn write_csr(ctx: &mut Context, csr: Csr, value: usize) -> Result<(), TrapInfo> {
     match csr {
-        #[cfg(rv64f = "none")]
+        #[cfg(feature = "fp-mem")]
         Csr::Fflags | Csr::Frm | Csr::Fcsr => return fp::write_csr(ctx, csr, value),
         _ => trap!(2, 0),
     }
@@ -120,7 +119,7 @@ pub fn step(ctx: &mut Context, op: &Op) -> Result<(), TrapInfo> {
         }
 
         _ => {
-            #[cfg(not(rv64f = "full"))]
+            #[cfg(feature = "fp-mem")]
             if fp::is_fp(op) {
                 return fp::step(ctx, op);
             }

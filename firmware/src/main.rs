@@ -34,6 +34,7 @@ mod address;
 mod allocator;
 #[allow(unused)]
 mod elf;
+mod inflate;
 #[allow(unused)]
 mod interp;
 #[allow(unused)]
@@ -53,6 +54,8 @@ mod uart;
 mod config {
     const MAX_HART: usize = 4;
 }
+
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use self::ipi::hart_count;
 
@@ -79,6 +82,8 @@ pub struct TrapInfo {
 
 #[no_mangle]
 extern "C" fn main(boot: bool) -> usize {
+    static DTB_PTR: AtomicUsize = AtomicUsize::new(0);
+
     let hartid = hartid();
 
     if boot {
@@ -103,60 +108,74 @@ extern "C" fn main(boot: bool) -> usize {
         //     core::slice::from_raw_parts_mut(0x40000000 as *mut usize, 0x07e00000 / 8)
         // });
 
-        if true {
-            allocator::scoped_with_memory(
-                unsafe { core::slice::from_raw_parts_mut(0x44000000 as *mut u8, 0x03e00000) },
-                || {
-                    let elf_file = if false {
+        let kernel_size = allocator::scoped_with_memory(
+            unsafe { core::slice::from_raw_parts_mut(0x44000000 as *mut u8, 0x03e00000) },
+            || {
+                let elf_file = if true {
+                    let time = timer::time();
+                    let mut vec = net::load_kernel();
+                    let elapsed = timer::time() - time;
+                    info!("kernel downloaded, elapsed: {:?}", elapsed);
+
+                    if inflate::is_gzip(&vec) {
+                        info!("kernel is compressed with gzip");
                         let time = timer::time();
-                        let vec = net::load_kernel();
+                        vec = inflate::inflate(&vec).unwrap();
                         let elapsed = timer::time() - time;
-                        println!("Elapsed: {:?}", elapsed);
-                        vec
-                    } else {
-                        use alloc::sync::Arc;
+                        info!("kernel decompressed, elapsed: {:?}", elapsed);
+                    }
+                    vec
+                } else {
+                    use alloc::sync::Arc;
+                    use io::Read;
 
-                        let sd = Arc::new(unsafe { block::Sd::new(crate::address::SD_BASE) });
-                        sd.power_on();
+                    let sd = Arc::new(unsafe { block::Sd::new(crate::address::SD_BASE) });
+                    sd.power_on();
 
-                        // let part = Arc::new(block::Part::first_partition(sd.clone()).unwrap());
+                    // let part = Arc::new(block::Part::first_partition(sd.clone()).unwrap());
 
-                        let fs = fs::ext::FileSystem::new(sd.clone()).unwrap();
-                        let root = fs.root().unwrap();
+                    let fs = fs::ext::FileSystem::new(sd.clone()).unwrap();
+                    let root = fs.root().unwrap();
 
-                        let mut kernel: Option<fs::ext::File> = None;
+                    let mut kernel: Option<fs::ext::File> = None;
 
-                        for entry in root {
-                            let entry = entry.unwrap();
-                            if !entry.is_dir() {
-                                println!("/{}", entry.file_name());
+                    for entry in root {
+                        let entry = entry.unwrap();
+                        if !entry.is_dir() {
+                            println!("/{}", entry.file_name());
 
-                                if entry.file_name() == "kernel" || entry.file_name() == "vmlinux" {
-                                    kernel = Some(entry.open().unwrap());
-                                }
+                            if entry.file_name() == "kernel" || entry.file_name() == "vmlinux" {
+                                kernel = Some(entry.open().unwrap());
                             }
                         }
+                    }
 
-                        let mut kernel = kernel.expect("Cannot locate kernel");
-                        let size = kernel.size() as usize;
+                    let mut kernel = kernel.expect("Cannot locate kernel");
+                    let size = kernel.size() as usize;
 
-                        println!("Loading kernel, size = {}KiB", size / 1024);
-                        let mut buffer = alloc::vec::Vec::with_capacity(size);
-                        unsafe { buffer.set_len(size) };
-                        let time = timer::time();
-                        kernel.read_exact(&mut buffer).unwrap();
-                        let elapsed = timer::time() - time;
-                        println!("Elapsed: {:?}", elapsed);
+                    println!("Loading kernel, size = {}KiB", size / 1024);
+                    let mut buffer = alloc::vec::Vec::with_capacity(size);
+                    unsafe { buffer.set_len(size) };
+                    let time = timer::time();
+                    kernel.read_exact(&mut buffer).unwrap();
+                    let elapsed = timer::time() - time;
+                    println!("Elapsed: {:?}", elapsed);
 
-                        drop(fs);
-                        drop(sd);
+                    drop(fs);
+                    drop(sd);
 
-                        buffer
-                    };
-                    let kernel_size = unsafe { elf::load_elf(&elf_file, 0x40000000) };
-                },
-            );
-        }
+                    buffer
+                };
+                let kernel_size = unsafe { elf::load_elf(&elf_file, 0x40000000) };
+                kernel_size
+            },
+        );
+
+        // Copy DTB to end of kenrel.
+        let dtb = include_bytes!(concat!(env!("OUT_DIR"), "/device_tree.dtb"));
+        let dtb_ptr = 0x40000000 + kernel_size;
+        DTB_PTR.store(dtb_ptr, Ordering::Relaxed);
+        unsafe { core::ptr::copy_nonoverlapping(dtb.as_ptr(), dtb_ptr as *mut u8, dtb.len()) };
 
         // loop {
         //     unsafe { asm!(""); }
@@ -170,13 +189,15 @@ extern "C" fn main(boot: bool) -> usize {
             ipi::set_msip(i, true);
         }
     } else {
+        fp::init_fp();
+
         // Booting process will invoke IPI, clear it.
         ipi::process_ipi();
     }
 
     println!("Core {} up", hartid);
 
-    include_bytes!(concat!(env!("OUT_DIR"), "/device_tree.dtb")).as_ptr() as usize
+    DTB_PTR.load(Ordering::Relaxed)
 }
 
 /// Delegate a interrupt to S-mode

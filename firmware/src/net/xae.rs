@@ -7,7 +7,6 @@ use smoltcp::{Error, Result};
 use crate::iomem::IoMem;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use core::convert::TryInto;
 use core::{cell::UnsafeCell, mem::MaybeUninit, time::Duration};
 use core::{ptr, slice};
 
