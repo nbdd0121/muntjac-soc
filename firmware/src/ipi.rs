@@ -133,10 +133,15 @@ struct IpiData {
     src: Option<usize>,
 }
 
-static IPI_DATA: [Mutex<Option<IpiData>>; MAX_HART_COUNT] =
-    repeat![Mutex<Option<IpiData>> => Mutex::new(None); MAX_HART_COUNT];
-static IPI_ACK: [AtomicU32; MAX_HART_COUNT] =
-    repeat![AtomicU32 => AtomicU32::new(0); MAX_HART_COUNT];
+static IPI_DATA: [Mutex<Option<IpiData>>; MAX_HART_COUNT] = {
+    const INIT: Mutex<Option<IpiData>> = Mutex::new(None);
+    [INIT; MAX_HART_COUNT]
+};
+
+static IPI_ACK: [AtomicU32; MAX_HART_COUNT] = {
+    const INIT: AtomicU32 = AtomicU32::new(0);
+    [INIT; MAX_HART_COUNT]
+};
 
 pub fn process_ipi() {
     let cur_id = super::hartid();
