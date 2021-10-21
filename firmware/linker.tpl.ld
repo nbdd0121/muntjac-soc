@@ -50,7 +50,7 @@ SECTIONS
   }
   .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) }
   . = ALIGN(64 / 8);
-  PROVIDE (__eh_frame = .);
+  .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
   .eh_frame       : { KEEP (*(.eh_frame)) *(.eh_frame.*) }
   .gcc_except_table   : { *(.gcc_except_table .gcc_except_table.*) }
   .gnu_extab   : { *(.gnu_extab*) }

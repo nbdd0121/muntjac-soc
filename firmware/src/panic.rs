@@ -1,9 +1,8 @@
 use core::cell::{Cell, UnsafeCell};
 use core::ffi::c_void;
-use core::mem::ManuallyDrop;
 use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
-use unwind::abi::*;
+use unwinding::{abi::*, panicking};
 
 hart_local! {
     static PANIC_COUNT: Cell<usize> = Cell::new(0);
@@ -27,7 +26,19 @@ fn stack_trace() {
     _Unwind_Backtrace(callback, &mut data as *mut _ as _);
 }
 
-const EXCEPTION_CLASS: u64 = u64::from_be_bytes(*b"garyRUST");
+struct Panic;
+
+unsafe impl panicking::Exception for Panic {
+    const CLASS: [u8; 8] = *b"noneRUST";
+
+    fn wrap(_: Self) -> *mut UnwindException {
+        EXCEPTION_STORAGE.get() as *mut UnwindException
+    }
+
+    unsafe fn unwrap(_: *mut UnwindException) -> Self {
+        Panic
+    }
+}
 
 #[panic_handler]
 pub fn panic(info: &PanicInfo<'_>) -> ! {
@@ -40,51 +51,15 @@ pub fn panic(info: &PanicInfo<'_>) -> ! {
     }
     PANIC_COUNT.set(1);
 
-    let mut unwind_ex = UnwindException::new();
-    unwind_ex.exception_class = EXCEPTION_CLASS;
-    unwind_ex.exception_cleanup = None;
-    let exception = EXCEPTION_STORAGE.get() as *mut UnwindException;
-    unsafe { exception.write(unwind_ex) }
-    let code = _Unwind_RaiseException(unsafe { &mut *exception });
-
-    match code {
+    match panicking::begin_panic(Panic) {
         UnwindReasonCode::END_OF_STACK => {
             println!("uncaught exception, aborting.");
         }
-        _ => println!("failed to initiate panic, error {}", code.0),
+        code => println!("failed to initiate panic, error {}", code.0),
     }
     super::abort();
 }
 
 pub fn catch_unwind<R, F: FnOnce() -> R>(f: F) -> Result<R, ()> {
-    union Data<F, R> {
-        f: ManuallyDrop<F>,
-        r: ManuallyDrop<R>,
-    }
-
-    let mut data = Data {
-        f: ManuallyDrop::new(f),
-    };
-
-    let data_ptr = &mut data as *mut _ as *mut u8;
-    unsafe {
-        return if core::intrinsics::r#try(do_call::<F, R>, data_ptr, do_catch::<F, R>) == 0 {
-            Ok(ManuallyDrop::into_inner(data.r))
-        } else {
-            Err(())
-        };
-    }
-
-    #[inline]
-    fn do_call<F: FnOnce() -> R, R>(data: *mut u8) {
-        unsafe {
-            let data = data as *mut Data<F, R>;
-            let data = &mut (*data);
-            let f = ManuallyDrop::take(&mut data.f);
-            data.r = ManuallyDrop::new(f());
-        }
-    }
-
-    #[inline]
-    fn do_catch<F: FnOnce() -> R, R>(_data: *mut u8, _payload: *mut u8) {}
+    panicking::catch_unwind::<Panic, _, _>(f).map_err(|_| ())
 }

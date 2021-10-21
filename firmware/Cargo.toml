@@ -15,8 +15,12 @@ riscv = { git = "ssh://git@github.com/nbdd0121/r2vm.git" }
 spin = "0.7"
 log = { version = "0.4", default-features = false }
 smoltcp = { version = "0.7", default-features = false, features = ["alloc", "ethernet", "socket-tcp", "socket-udp", "proto-ipv4", "proto-ipv6", "async"] }
-compiler_builtins_local = { version = "0.1.50", package = "compiler_builtins" }
-unwind = { path = "../../unwind", default-features = false, features = ["unwinder", "personality", "fde-static"]}
+compiler_builtins_local = { path = "../../compiler-builtins", package = "compiler_builtins" }
+unwinding = { version = "0.1.1", default-features = false, features = ["unwinder", "personality", "fde-gnu-eh-frame-hdr", "panicking"] }
+
+[patch.crates-io]
+unwinding = { git = "https://github.com/nbdd0121/unwinding.git", rev = "9741d8a1774349e5b714df6c3344f7a7d94b7b46" }
+gimli = { git = "https://github.com/gimli-rs/gimli.git", rev = "7a3aeef78d169b39e15e18f1573492c501b25c68" }
 
 [profile.release]
 opt-level = 2
