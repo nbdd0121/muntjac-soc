@@ -5,10 +5,10 @@ use smoltcp::time::Instant;
 use smoltcp::{Error, Result};
 
 use crate::iomem::IoMem;
+use crate::util::{uninit_array, zeroed_slice};
 use alloc::boxed::Box;
-use alloc::vec::Vec;
+use core::slice;
 use core::{cell::UnsafeCell, mem::MaybeUninit, time::Duration};
-use core::{ptr, slice};
 
 #[repr(C, align(0x40))]
 struct Descriptor {
@@ -63,26 +63,6 @@ const ETH_FCC_TX: u32 = 1 << 30;
 const DMA_DESC_CR_TXEOF: u32 = 1 << 26;
 const DMA_DESC_CR_TXSOF: u32 = 1 << 27;
 const DMA_DESC_SR_ALL: u32 = 0xFC000000;
-
-unsafe fn uninit_vec<T>(len: usize) -> Vec<T> {
-    let mut vec = Vec::with_capacity(len);
-    vec.set_len(len);
-    vec
-}
-
-unsafe fn uninit_slice<T>(len: usize) -> Box<[T]> {
-    uninit_vec(len).into_boxed_slice()
-}
-
-unsafe fn uninit_array<T, const N: usize>() -> Box<[T; N]> {
-    uninit_slice(N).try_into().map_err(|_| ()).unwrap()
-}
-
-unsafe fn zeroed_slice<T>(len: usize) -> Box<[T]> {
-    let mut vec = uninit_slice(len);
-    ptr::write_bytes(vec.as_mut_ptr(), 0, len);
-    vec
-}
 
 pub struct XilinxAxiEthernet {
     eth_base: IoMem<0x1000>,

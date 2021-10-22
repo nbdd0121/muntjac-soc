@@ -1,8 +1,27 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use core::cell::UnsafeCell;
+use core::mem::{ManuallyDrop, MaybeUninit};
 use core::ptr;
-use core::{cell::UnsafeCell, mem::MaybeUninit};
 use spin::Mutex;
+
+pub struct ScopeGuard<F: FnOnce()> {
+    f: ManuallyDrop<F>,
+}
+
+impl<F: FnOnce()> ScopeGuard<F> {
+    pub fn new(f: F) -> Self {
+        Self {
+            f: ManuallyDrop::new(f),
+        }
+    }
+}
+
+impl<F: FnOnce()> Drop for ScopeGuard<F> {
+    fn drop(&mut self) {
+        unsafe { ManuallyDrop::take(&mut self.f)() }
+    }
+}
 
 pub struct OnceCell<T> {
     ready: Mutex<bool>,
