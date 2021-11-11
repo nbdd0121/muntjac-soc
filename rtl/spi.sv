@@ -37,7 +37,7 @@ module spi #(
   // should already observe needed clock cycles.
 
   logic [4:0] rstn_ff;
-  always @(posedge io_clk_i or negedge rst_ni) begin
+  always @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       rstn_ff <= 0;
     end else begin
@@ -49,7 +49,7 @@ module spi #(
 
   wire sck_o;
   wire sck_t;
-  wire cclk_o = rstn_sync ? sck_o : io_clk_i;
+  wire cclk_o = rstn_sync ? sck_o : clk_i;
   wire cclk_t = rstn_sync ? sck_t : 1'b0;
 
   (* KEEP = "true" *)
