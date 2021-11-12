@@ -34,9 +34,68 @@ module chip_top (
   output        ddr2_sdram_we_n
 );
 
+  localparam NumCores = 2;
+  localparam TimerClkFreq = 50;
+  localparam AddrWidth = 38;
+  localparam DmaSourceWidth = 3;
+  localparam HostSourceWidth = 2;
+  localparam DeviceSourceWidth = 5;
+  localparam SinkWidth = 4;
+
   logic clk;
   logic io_clk;
   logic rstn;
+
+  `TL_DECLARE(128, AddrWidth, DmaSourceWidth, SinkWidth, dma_tl);
+  `TL_DECLARE(128, AddrWidth, DeviceSourceWidth, 1, mem_tl);
+  `TL_DECLARE(32, AddrWidth, DeviceSourceWidth, 1, rom_tl);
+  `TL_DECLARE(32, AddrWidth, DeviceSourceWidth, 1, io_tl);
+
+  /////////////////
+  // #region DMA //
+
+  // No IO devices can perform DMA just yet.
+  assign dma_tl_a_valid = 1'b0;
+  assign dma_tl_a = 'x;
+  assign dma_tl_b_ready = 1'b0;
+  assign dma_tl_c_valid = 1'b0;
+  assign dma_tl_c = 'x;
+  assign dma_tl_d_ready = 1'b0;
+  assign dma_tl_e_valid = 1'b0;
+  assign dma_tl_e = 'x;
+
+  // #endregion
+  /////////////////
+
+  /////////////////
+  // #region CCX //
+
+  logic [NumCores-1:0] irq_timer_m;
+  logic [NumCores-1:0] irq_software_m;
+  logic [NumCores-1:0] irq_external_s;
+  logic [NumCores-1:0] irq_external_m;
+
+  ccx #(
+    .NumCores (NumCores),
+    .DmaSourceWidth (DmaSourceWidth),
+    .DeviceSourceWidth (DeviceSourceWidth),
+    .SinkWidth (SinkWidth),
+    .AddrWidth (AddrWidth)
+  ) ccx (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    .irq_software_m_i (irq_software_m),
+    .irq_timer_m_i (irq_timer_m),
+    .irq_external_m_i (irq_external_m),
+    .irq_external_s_i (irq_external_s),
+    `TL_CONNECT_DEVICE_PORT(dma, dma_tl),
+    `TL_CONNECT_HOST_PORT(mem, mem_tl),
+    `TL_CONNECT_HOST_PORT(rom, rom_tl),
+    `TL_CONNECT_HOST_PORT(io, io_tl)
+  );
+
+  // #endregion
+  /////////////////
 
   ///////////////////////////
   // #region DDR and clock //
@@ -70,6 +129,26 @@ module chip_top (
     `TL_CONNECT_DEVICE_PORT(link, ddr_tl)
   );
 
+  tl_adapter #(
+    .HostDataWidth (128),
+    .DeviceDataWidth (128),
+    .HostAddrWidth (AddrWidth),
+    .DeviceAddrWidth (27),
+    .HostSourceWidth (DeviceSourceWidth),
+    .DeviceSourceWidth (8),
+    .HostSinkWidth (1),
+    .DeviceSinkWidth (1),
+    .HostMaxSize (6),
+    .DeviceMaxSize (6),
+    .HostFifo (1'b0),
+    .DeviceFifo (1'b0)
+  ) mem_adapter (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    `TL_CONNECT_DEVICE_PORT(host, mem_tl),
+    `TL_CONNECT_HOST_PORT(device, ddr_tl)
+  );
+
   // #endregion
   ///////////////////////////
 
@@ -91,8 +170,98 @@ module chip_top (
     `TL_CONNECT_DEVICE_PORT(link, flash_tl)
   );
 
+  tl_adapter #(
+    .HostDataWidth (128),
+    .DeviceDataWidth (128),
+    .HostAddrWidth (AddrWidth),
+    .DeviceAddrWidth (24),
+    .HostSourceWidth (DeviceSourceWidth),
+    .DeviceSourceWidth (1),
+    .HostSinkWidth (1),
+    .DeviceSinkWidth (1),
+    .HostMaxSize (6),
+    .DeviceMaxSize (6),
+    .HostFifo (1'b0),
+    .DeviceFifo (1'b0)
+  ) rom_adapter (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    `TL_CONNECT_DEVICE_PORT(host, rom_tl),
+    `TL_CONNECT_HOST_PORT(device, flash_tl)
+  );
+
   // #endregion
   ///////////////////////
+
+  ///////////////////////
+  // #region IO Switch //
+
+  `TL_DECLARE_ARR(64, AddrWidth, DeviceSourceWidth, 1, io_ch, [3:0]);
+
+  localparam [AddrWidth-1:0] PlicBaseAddr  = 'h11000000;
+  localparam [AddrWidth-1:0] PlicBaseMask  = 'h  3FFFFF;
+
+  localparam [AddrWidth-1:0] ClintBaseAddr = 'h11400000;
+  localparam [AddrWidth-1:0] ClintBaseMask = 'h    FFFF;
+
+  localparam [AddrWidth-1:0] SdhciBaseAddr = 'h10010000;
+  localparam [AddrWidth-1:0] SdhciBaseMask = 'h     FFF;
+
+  tl_socket_1n #(
+    .SourceWidth (DeviceSourceWidth),
+    .AddrWidth (AddrWidth),
+    .DataWidth (64),
+    .NumLinks    (4),
+    .NumAddressRange (3),
+    .AddressBase ({ClintBaseAddr, PlicBaseAddr, SdhciBaseAddr}),
+    .AddressMask ({ClintBaseMask, PlicBaseMask, SdhciBaseMask}),
+    .AddressLink ({3'd         1, 3'd        2, 3'd         3})
+  ) io_socket_1n (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    `TL_CONNECT_DEVICE_PORT(host, io_tl),
+    `TL_CONNECT_HOST_PORT(device, io_ch)
+  );
+
+  // #endregion
+  ///////////////////////
+
+  ////////////////////////////
+  // #region PLIC and CLINT //
+
+  clint_tl #(
+    .NumHarts (NumCores),
+    .TimerClockFrequency (50),
+    .AddrWidth (AddrWidth),
+    .SourceWidth (DeviceSourceWidth)
+  ) clint (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    .timer_clk_i (io_clk),
+    .msip_o (irq_software_m),
+    .mtip_o (irq_timer_m),
+    `TL_CONNECT_DEVICE_PORT_IDX(link, io_ch, [1])
+  );
+
+  logic [31:0] interrupts;
+  logic [31:0] edge_trigger;
+
+  plic_tl #(
+    .NumContexts (NumCores),
+    .NumIrqs (32),
+    .AddrWidth (AddrWidth),
+    .SourceWidth (DeviceSourceWidth)
+  ) plic (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    .interrupts_i (interrupts),
+    .edge_trigger_i (edge_trigger),
+    .irq_o (irq_external_s),
+    `TL_CONNECT_DEVICE_PORT_IDX(link, io_ch, [2])
+  );
+
+  // #endregion
+  ////////////////////////////
 
   //////////////////
   // #region UART //
@@ -116,9 +285,29 @@ module chip_top (
     `TL_CONNECT_DEVICE_PORT(link, uart_tl),
     .irq_o (irq_uart)
   );
+  
+  tl_adapter #(
+    .HostDataWidth (64),
+    .DeviceDataWidth (32),
+    .HostAddrWidth (AddrWidth),
+    .DeviceAddrWidth (13),
+    .HostSourceWidth (DeviceSourceWidth),
+    .DeviceSourceWidth (1),
+    .HostSinkWidth (1),
+    .DeviceSinkWidth (1),
+    .HostMaxSize (3),
+    .DeviceMaxSize (2),
+    .HostFifo (1'b0),
+    .DeviceFifo (1'b1)
+  ) uart_adapter (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [0]),
+    `TL_CONNECT_HOST_PORT(device, uart_tl)
+  );
 
   // #endregion
-  ///////////////////////
+  //////////////////
   
   ///////////////////
   // #region SDHCI //
@@ -142,8 +331,47 @@ module chip_top (
     `TL_CONNECT_DEVICE_PORT(link, sdhci_tl),
     .irq_o (irq_sd)
   );
+  
+  tl_adapter #(
+    .HostDataWidth (64),
+    .DeviceDataWidth (32),
+    .HostAddrWidth (AddrWidth),
+    .DeviceAddrWidth (12),
+    .HostSourceWidth (DeviceSourceWidth),
+    .DeviceSourceWidth (1),
+    .HostSinkWidth (1),
+    .DeviceSinkWidth (1),
+    .HostMaxSize (3),
+    .DeviceMaxSize (2),
+    .HostFifo (1'b0),
+    .DeviceFifo (1'b1)
+  ) sdhci_adapter (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [3]),
+    `TL_CONNECT_HOST_PORT(device, sdhci_tl)
+  );
 
   // #endregion
-  ///////////////////////
+  ///////////////////
+
+  ////////////////////////
+  // region IRQ routing //
+
+  always_comb begin
+    interrupts = '0;
+    edge_trigger = '0;
+
+    // UART IRQ is level-triggered
+    interrupts[1] = irq_uart;
+    edge_trigger[1] = 1'b0;
+
+    // SD IRQ is level-triggered
+    interrupts[2] = irq_sd;
+    edge_trigger[1] = 1'b0;
+  end
+
+  // endregion
+  ////////////////////////
 
 endmodule

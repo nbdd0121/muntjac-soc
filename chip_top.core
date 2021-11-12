@@ -12,12 +12,23 @@ filesets:
       - lowrisc:axi_lite:common
       - lowrisc:tl:adapter_bram
       - garyguo.net:peripheral:sdhci
+      - lowrisc:tl:socket_m1
+      - lowrisc:tl:socket_1n
+      - lowrisc:muntjac:llc
+      - lowrisc:tl:adapter
+      - lowrisc:tl:ram_terminator
+      - lowrisc:tl:io_terminator
     files:
       - rtl/chip_top.sv
       - rtl/ddr.sv
       - rtl/spi.sv
       - rtl/uart.sv
       - rtl/sdhci.sv
+      - rtl/ccx.sv
+      - rtl/uncore/clint.sv
+      - rtl/uncore/clint_tl.sv
+      - rtl/uncore/plic.sv
+      - rtl/uncore/plic_tl.sv
     file_type: systemVerilogSource
 
   files_constraints:
