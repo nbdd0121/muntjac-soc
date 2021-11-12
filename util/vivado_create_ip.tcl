@@ -2,6 +2,9 @@ set workroot [pwd]
 
 set_property used_in_synthesis false [get_files clocks.xdc]
 
+# Enable Retiming in synthesis
+set_property STEPS.SYNTH_DESIGN.ARGS.RETIMING true [get_runs synth_1]
+
 # Create DDR Memory Controller
 # This IP needs a 200MHz+ clock so we will need a clock wizard.
 create_ip -name mig_7series -vendor xilinx.com -library ip -module_name mig_7series_0

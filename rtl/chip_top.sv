@@ -49,7 +49,7 @@ module chip_top (
   `TL_DECLARE(128, AddrWidth, DmaSourceWidth, SinkWidth, dma_tl);
   `TL_DECLARE(128, AddrWidth, DeviceSourceWidth, 1, mem_tl);
   `TL_DECLARE(32, AddrWidth, DeviceSourceWidth, 1, rom_tl);
-  `TL_DECLARE(32, AddrWidth, DeviceSourceWidth, 1, io_tl);
+  `TL_DECLARE(64, AddrWidth, DeviceSourceWidth, 1, io_tl);
 
   /////////////////
   // #region DMA //
@@ -171,8 +171,8 @@ module chip_top (
   );
 
   tl_adapter #(
-    .HostDataWidth (128),
-    .DeviceDataWidth (128),
+    .HostDataWidth (32),
+    .DeviceDataWidth (32),
     .HostAddrWidth (AddrWidth),
     .DeviceAddrWidth (24),
     .HostSourceWidth (DeviceSourceWidth),

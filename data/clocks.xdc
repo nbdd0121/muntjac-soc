@@ -24,7 +24,6 @@ set_false_path -from [get_clocks sd_sck] -to [get_clocks bus_clk]
 set_false_path -from [get_clocks bus_clk] -to [get_clocks io_clk]
 set_false_path -from [get_clocks io_clk] -to [get_clocks bus_clk]
 
-# This ought to be 14ns. But that fails timing, and I'm too lazy to change 50MHz clock to 46MHz.
 set_input_delay -clock sd_sck -clock_fall -max 14.000 [get_ports sd_dat]
 set_input_delay -clock sd_sck -clock_fall -min 0.000 [get_ports sd_dat]
 set_input_delay -clock sd_sck -clock_fall -max 14.000 [get_ports sd_cmd]
