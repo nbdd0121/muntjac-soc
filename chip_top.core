@@ -1,7 +1,7 @@
 CAPI=2:
 # SPDX-License-Identifier: MIT OR Apache-2.0
-name: "garyguo.net:systems:muntjac_soc_nexys_a7:0.1"
-description: "Muntjac SoC toplevel for the Nexys A7 board"
+name: "garyguo.net:systems:muntjac_soc:0.1"
+description: "Muntjac SoC toplevel"
 filesets:
   files_rtl:
     depend:
@@ -19,8 +19,6 @@ filesets:
       - lowrisc:tl:ram_terminator
       - lowrisc:tl:io_terminator
     files:
-      - rtl/chip_top.sv
-      - rtl/ddr.sv
       - rtl/spi.sv
       - rtl/uart.sv
       - rtl/sdhci.sv
@@ -31,17 +29,42 @@ filesets:
       - rtl/uncore/plic_tl.sv
     file_type: systemVerilogSource
 
-  files_constraints:
+  files_rtl_nexys_a7:
+    files:
+      - rtl/chip_top.sv
+      - rtl/ddr.sv
+    file_type: systemVerilogSource
+
+  files_rtl_genesys_2:
+    files:
+      - rtl/chip_top_genesys_2.sv
+      - rtl/ddr_genesys_2.sv
+    file_type: systemVerilogSource
+
+  files_constraints_nexys_a7:
     files:
       - data/clocks.xdc
       - data/pins_nexys_a7.xdc
     file_type: xdc
 
-  files_tcl:
+  files_constraints_genesys_2:
+    files:
+      - data/clocks_genesys_2.xdc
+      - data/pins_genesys_2.xdc
+    file_type: xdc
+
+  files_tcl_nexys_a7:
     files:
       - util/vivado_create_ip.tcl
       # File copied by fusesoc into the workroot
       - data/mig.prj: { file_type: user, copyto: mig.prj }
+    file_type: tclSource
+
+  files_tcl_genesys_2:
+    files:
+      - util/vivado_create_ip_genesys_2.tcl
+      # File copied by fusesoc into the workroot
+      - data/mig_genesys_2.prj: { file_type: user, copyto: mig.prj }
     file_type: tclSource
 
 parameters:
@@ -56,15 +79,30 @@ targets:
       - files_rtl
     toplevel: chip_top
 
-  synth:
+  nexys_a7:
     default_tool: vivado
     filesets:
       - files_rtl
-      - files_constraints
-      - files_tcl
+      - files_rtl_nexys_a7
+      - files_constraints_nexys_a7
+      - files_tcl_nexys_a7
     toplevel: chip_top
     parameters:
       - PRIM_DEFAULT_IMPL=prim_pkg::ImplXilinx
     tools:
       vivado:
         part: "xc7a100tcsg324-1"
+
+  genesys_2:
+    default_tool: vivado
+    filesets:
+      - files_rtl
+      - files_rtl_genesys_2
+      - files_constraints_genesys_2
+      - files_tcl_genesys_2
+    toplevel: chip_top
+    parameters:
+      - PRIM_DEFAULT_IMPL=prim_pkg::ImplXilinx
+    tools:
+      vivado:
+        part: "xc7k325tffg900-2"
