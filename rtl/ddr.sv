@@ -223,8 +223,8 @@ module ddr #(
     .SourceWidth (SourceWidth),
     .IdWidth (SourceWidth)
   ) adapter (
-    .clk_i (clk),
-    .rst_ni (rstn),
+    .clk_i (clk_o),
+    .rst_ni (rst_no),
     `TL_FORWARD_DEVICE_PORT(host, link),
     `AXI_CONNECT_HOST_PORT(device, axi_sync)
   );

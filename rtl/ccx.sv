@@ -82,7 +82,7 @@ module ccx import muntjac_pkg::*; #(
   logic hpm_rel_count;
   logic hpm_miss;
 
-  for (genvar i = 0; i < NumCores; i++) begin
+  for (genvar i = 0; i < NumCores; i++) begin: core
     
     logic [HPM_EVENT_NUM-1:0] hpm_event;
     always_comb begin
