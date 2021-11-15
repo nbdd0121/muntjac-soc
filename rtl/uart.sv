@@ -12,10 +12,10 @@ module uart #(
   input io_clk_i,
 
   // IO ports
-  input  uart_rts,
-  output uart_cts,
-  input  uart_txd,
-  output uart_rxd,
+  output uart_tx,
+  input  uart_rx,
+  input  uart_cts,
+  output uart_rts,
 
   // TileLink port
   `TL_DECLARE_DEVICE_PORT(DataWidth, AddrWidth, SourceWidth, 1, link),
@@ -34,9 +34,9 @@ module uart #(
     .locked   ()
   );
 
-  wire uart_rtsn = ~uart_rts;
-  wire uart_ctsn;
-  assign uart_cts = ~uart_ctsn;
+  wire uart_ctsn = ~uart_cts;
+  wire uart_rtsn;
+  assign uart_rts = ~uart_rtsn;
 
   axi_uart16550_0 uart (
     .s_axi_aclk    (io_clk_i),
@@ -61,18 +61,18 @@ module uart #(
     .s_axi_rdata   (axi_r.data),
     .s_axi_rresp   (axi_r.resp),
     .baudoutn (),
-    .ctsn   (uart_rtsn),
-    .dcdn   (1'b0),
+    .ctsn   (uart_ctsn),
+    .dcdn   (1'b1),
     .ddis   (),
-    .dsrn   (1'b0),
+    .dsrn   (1'b1),
     .dtrn   (),
     .out1n  (),
     .out2n  (),
-    .rin    (1'b0),
-    .rtsn   (uart_ctsn),
+    .rin    (1'b1),
+    .rtsn   (uart_rtsn),
     .rxrdyn (),
-    .sin    (uart_txd),
-    .sout   (uart_rxd),
+    .sin    (uart_rx),
+    .sout   (uart_tx),
     .txrdyn (),
     .xin    (uart_clk),
     .xout   ()

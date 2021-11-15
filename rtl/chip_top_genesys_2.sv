@@ -8,8 +8,8 @@ module chip_top (
   inout  [1:0] qspi_dq,
   output       qspi_csn,
   // UART
-  input  uart_rx,
   output uart_tx,
+  input  uart_rx,
   // SD
   input        sd_cd,
   inout        sd_cmd,
@@ -280,10 +280,10 @@ module chip_top (
     .clk_i (clk),
     .rst_ni (rstn),
     .io_clk_i (io_clk),
-    .uart_rts (1'b0),
-    .uart_cts (),
-    .uart_txd (uart_rx),
-    .uart_rxd (uart_tx),
+    .uart_tx  (uart_tx),
+    .uart_rx  (uart_rx),
+    .uart_cts (1'b0),
+    .uart_rts (),
     `TL_CONNECT_DEVICE_PORT(link, uart_tl),
     .irq_o (irq_uart)
   );

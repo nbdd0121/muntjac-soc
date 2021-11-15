@@ -12,10 +12,10 @@ set_property IOSTANDARD LVCMOS33 [get_ports qspi_dq[1]]
 #set_property PACKAGE_PIN R21 [get_ports qspi_dq[3]]
 #set_property IOSTANDARD LVCMOS33 [get_ports qspi_dq[3]]
 
-set_property PACKAGE_PIN Y20 [get_ports uart_rx]
-set_property IOSTANDARD LVCMOS33 [get_ports uart_rx]
 set_property PACKAGE_PIN Y23 [get_ports uart_tx]
 set_property IOSTANDARD LVCMOS33 [get_ports uart_tx]
+set_property PACKAGE_PIN Y20 [get_ports uart_rx]
+set_property IOSTANDARD LVCMOS33 [get_ports uart_rx]
 
 set_property PACKAGE_PIN AE24 [get_ports sd_reset]
 set_property IOSTANDARD LVCMOS33 [get_ports sd_reset]
