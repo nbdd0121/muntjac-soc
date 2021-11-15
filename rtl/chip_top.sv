@@ -196,13 +196,16 @@ module chip_top (
   ///////////////////////
   // #region IO Switch //
 
-  `TL_DECLARE_ARR(64, AddrWidth, DeviceSourceWidth, 1, io_ch, [3:0]);
+  `TL_DECLARE_ARR(64, AddrWidth, DeviceSourceWidth, 1, io_ch, [4:0]);
 
   localparam [AddrWidth-1:0] PlicBaseAddr  = 'h11000000;
   localparam [AddrWidth-1:0] PlicBaseMask  = 'h  3FFFFF;
 
   localparam [AddrWidth-1:0] ClintBaseAddr = 'h11400000;
   localparam [AddrWidth-1:0] ClintBaseMask = 'h    FFFF;
+
+  localparam [AddrWidth-1:0] UartBaseAddr  = 'h10000000;
+  localparam [AddrWidth-1:0] UartBaseMask  = 'h    1FFF;
 
   localparam [AddrWidth-1:0] SdhciBaseAddr = 'h10010000;
   localparam [AddrWidth-1:0] SdhciBaseMask = 'h     FFF;
@@ -211,16 +214,28 @@ module chip_top (
     .SourceWidth (DeviceSourceWidth),
     .AddrWidth (AddrWidth),
     .DataWidth (64),
-    .NumLinks    (4),
-    .NumAddressRange (3),
-    .AddressBase ({ClintBaseAddr, PlicBaseAddr, SdhciBaseAddr}),
-    .AddressMask ({ClintBaseMask, PlicBaseMask, SdhciBaseMask}),
-    .AddressLink ({3'd         1, 3'd        2, 3'd         3})
+    .NumLinks    (5),
+    .NumAddressRange (4),
+    .AddressBase ({ClintBaseAddr, PlicBaseAddr, UartBaseAddr, SdhciBaseAddr}),
+    .AddressMask ({ClintBaseMask, PlicBaseMask, UartBaseMAsk, SdhciBaseMask}),
+    .AddressLink ({3'd         1, 3'd        2, 3'd        3, 3'd         4})
   ) io_socket_1n (
     .clk_i (clk),
     .rst_ni (rstn),
     `TL_CONNECT_DEVICE_PORT(host, io_tl),
     `TL_CONNECT_HOST_PORT(device, io_ch)
+  );
+
+  tl_error_sink #(
+    .DataWidth (64),
+    .AddrWidth (AddrWidth),
+    .SourceWidth (DeviceSourceWidth),
+    .SinkWidth (1),
+    .MaxSize (3)
+  ) error_sink (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [0])
   );
 
   // #endregion
@@ -302,7 +317,7 @@ module chip_top (
   ) uart_adapter (
     .clk_i (clk),
     .rst_ni (rstn),
-    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [0]),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [3]),
     `TL_CONNECT_HOST_PORT(device, uart_tl)
   );
 
@@ -348,7 +363,7 @@ module chip_top (
   ) sdhci_adapter (
     .clk_i (clk),
     .rst_ni (rstn),
-    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [3]),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [4]),
     `TL_CONNECT_HOST_PORT(device, sdhci_tl)
   );
 

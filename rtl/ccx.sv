@@ -60,12 +60,12 @@ module ccx import muntjac_pkg::*; #(
   
   localparam [SinkWidth-1:0] IoSinkBase = 5;
   localparam [SinkWidth-1:0] IoSinkMask = 0;
+
+  localparam [AddrWidth-1:0] MemBase = 'h40000000;
+  localparam [AddrWidth-1:0] MemMask = 'h3FFFFFFF;
   
   localparam [AddrWidth-1:0] RomBase = 'h00000000;
   localparam [AddrWidth-1:0] RomMask = 'h 1FFFFFF;
-
-  localparam [AddrWidth-1:0] IoBase  = 'h10000000;
-  localparam [AddrWidth-1:0] IoMask  = 'h FFFFFFF;
 
   if (SourceBaseDma + SourceMaskDma >= 2 ** DeviceSourceWidth) $fatal(1, "Not enough source width");
   
@@ -243,13 +243,13 @@ module ccx import muntjac_pkg::*; #(
     .DataWidth (DataWidth),
     .NumLinks    (3),
     .NumAddressRange (2),
-    .AddressBase     ({RomBase, IoBase}),
-    .AddressMask     ({RomMask, IoMask}),
-    .AddressLink     ({2'd   1, 2'd  2}),
+    .AddressBase     ({MemBase, RomBase}),
+    .AddressMask     ({MemMask, RomMask}),
+    .AddressLink     ({2'd   1, 2'd   2}),
     .NumSinkRange (2),
-    .SinkBase ({RomSinkBase, IoSinkBase}),
-    .SinkMask ({RomSinkMask, IoSinkMask}),
-    .SinkLink ({2'd       1, 2'd      2})
+    .SinkBase ({MemSinkBase, RomSinkBase}),
+    .SinkMask ({MemSinkMask, RomSinkMask}),
+    .SinkLink ({2'd       1, 2'd       2})
   ) socket_1n (
     .clk_i,
     .rst_ni,
@@ -297,7 +297,7 @@ module ccx import muntjac_pkg::*; #(
     .hpm_acq_count_o (hpm_acq_count),
     .hpm_rel_count_o (hpm_rel_count),
     .hpm_miss_o (hpm_miss),
-    `TL_CONNECT_DEVICE_PORT_IDX(host, device_ch, [0]),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, device_ch, [1]),
     `TL_CONNECT_HOST_PORT(device, mem_tlc)
   );
 
@@ -354,7 +354,7 @@ module ccx import muntjac_pkg::*; #(
   ) rom_term (
     .clk_i,
     .rst_ni,
-    `TL_CONNECT_DEVICE_PORT_IDX(host, device_ch, [1]),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, device_ch, [2]),
     `TL_CONNECT_HOST_PORT(device, rom_tlc)
   );
 
@@ -393,7 +393,7 @@ module ccx import muntjac_pkg::*; #(
   ) io_term (
     .clk_i,
     .rst_ni,
-    `TL_CONNECT_DEVICE_PORT_IDX(host, device_ch, [2]),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, device_ch, [0]),
     `TL_CONNECT_HOST_PORT(device, io_tlc)
   );
 

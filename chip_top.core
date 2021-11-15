@@ -18,6 +18,7 @@ filesets:
       - lowrisc:tl:adapter
       - lowrisc:tl:ram_terminator
       - lowrisc:tl:io_terminator
+      - lowrisc:tl:error_sink
     files:
       - rtl/spi.sv
       - rtl/uart.sv
