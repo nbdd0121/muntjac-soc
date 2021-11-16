@@ -83,7 +83,7 @@ set_property -dict [list \
 create_ip -name clk_wiz -vendor xilinx.com -library ip -version 6.0 -module_name clk_wiz_uart
 set_property -dict [list \
     CONFIG.PRIMITIVE {PLL} \
-    CONFIG.PRIM_SOURCE {Global_buffer} \
+    CONFIG.PRIM_SOURCE {No_buffer} \
     CONFIG.PRIM_IN_FREQ {50} \
     CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {18.432} \
     CONFIG.RESET_TYPE {ACTIVE_LOW} \
