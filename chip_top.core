@@ -37,9 +37,12 @@ filesets:
     file_type: systemVerilogSource
 
   files_rtl_genesys_2:
+    depend:
+      - lowrisc:axi:tl_adapter
     files:
       - genesys_2/rtl/chip_top.sv
       - genesys_2/rtl/ddr.sv
+      - genesys_2/rtl/eth.sv
     file_type: systemVerilogSource
 
   files_constraints_nexys_a7:
@@ -64,6 +67,7 @@ filesets:
   files_tcl_genesys_2:
     files:
       - genesys_2/util/vivado_create_ip.tcl
+      - genesys_2/util/create_eth_ip.tcl
       # File copied by fusesoc into the workroot
       - genesys_2/data/mig.prj: { file_type: user, copyto: mig.prj }
     file_type: tclSource
