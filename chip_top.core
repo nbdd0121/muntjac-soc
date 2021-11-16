@@ -32,40 +32,40 @@ filesets:
 
   files_rtl_nexys_a7:
     files:
-      - rtl/chip_top.sv
-      - rtl/ddr.sv
+      - nexys_a7/rtl/chip_top.sv
+      - nexys_a7/rtl/ddr.sv
     file_type: systemVerilogSource
 
   files_rtl_genesys_2:
     files:
-      - rtl/chip_top_genesys_2.sv
-      - rtl/ddr_genesys_2.sv
+      - genesys_2/rtl/chip_top.sv
+      - genesys_2/rtl/ddr.sv
     file_type: systemVerilogSource
 
   files_constraints_nexys_a7:
     files:
-      - data/clocks.xdc
-      - data/pins_nexys_a7.xdc
+      - nexys_a7/data/clocks.xdc
+      - nexys_a7/data/pins.xdc
     file_type: xdc
 
   files_constraints_genesys_2:
     files:
-      - data/clocks_genesys_2.xdc
-      - data/pins_genesys_2.xdc
+      - genesys_2/data/clocks.xdc
+      - genesys_2/data/pins.xdc
     file_type: xdc
 
   files_tcl_nexys_a7:
     files:
-      - util/vivado_create_ip.tcl
+      - nexys_a7/util/vivado_create_ip.tcl
       # File copied by fusesoc into the workroot
       - data/mig.prj: { file_type: user, copyto: mig.prj }
     file_type: tclSource
 
   files_tcl_genesys_2:
     files:
-      - util/vivado_create_ip_genesys_2.tcl
+      - genesys_2/util/vivado_create_ip.tcl
       # File copied by fusesoc into the workroot
-      - data/mig_genesys_2.prj: { file_type: user, copyto: mig.prj }
+      - genesys_2/data/mig.prj: { file_type: user, copyto: mig.prj }
     file_type: tclSource
 
 parameters:

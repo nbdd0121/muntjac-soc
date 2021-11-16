@@ -1,6 +1,6 @@
 set workroot [pwd]
 
-set_property used_in_synthesis false [get_files clocks_genesys_2.xdc]
+set_property used_in_synthesis false [get_files clocks.xdc]
 
 # Enable Retiming in synthesis
 set_property STEPS.SYNTH_DESIGN.ARGS.RETIMING true [get_runs synth_1]
