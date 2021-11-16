@@ -30,8 +30,8 @@ fn main() -> IoResult<()> {
     println!("cargo:rerun-if-changed=device_tree.tpl.dts");
     let tpl = fs::read_to_string("device_tree.tpl.dts").unwrap();
     let dts = tpl
-        .replace("${MEMORY_BASE}", &format!("{:#x}", MEMORY_BASE))
-        .replace("${MEMORY_SIZE}", &format!("{:#x}", MEMORY_SIZE - 0x200000));
+        .replace("${MEMORY_BASE}", &format!("{:x}", MEMORY_BASE))
+        .replace("${MEMORY_SIZE}", &format!("{:x}", MEMORY_SIZE - 0x200000));
     fs::write("device_tree.dts", dts).unwrap();
     let dtb = format!("{}/device_tree.dtb", out_dir);
     let status = Command::new("dtc")

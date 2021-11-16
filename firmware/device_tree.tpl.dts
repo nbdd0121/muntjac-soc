@@ -139,7 +139,7 @@
 	};
 
 	memory@${MEMORY_BASE} {
-		reg = /bits/ 64 <${MEMORY_BASE} ${MEMORY_SIZE}>;
+		reg = /bits/ 64 <0x${MEMORY_BASE} 0x${MEMORY_SIZE}>;
 		device_type = "memory";
 	};
 };
