@@ -8,7 +8,8 @@ use unwinding::{abi::*, panicking};
 static PANIC_COUNT: Cell<usize> = Cell::new(0);
 
 #[thread_local]
-static EXCEPTION_STORAGE: UnsafeCell<MaybeUninit<UnwindException>> = UnsafeCell::new(MaybeUninit::uninit());
+static EXCEPTION_STORAGE: UnsafeCell<MaybeUninit<UnwindException>> =
+    UnsafeCell::new(MaybeUninit::uninit());
 
 fn stack_trace() {
     struct CallbackData {

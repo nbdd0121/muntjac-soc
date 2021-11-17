@@ -337,7 +337,10 @@ pub fn init_fp() {
     let mode = FpMode::detect();
     info!("Core {} FP mode = {:?}", crate::hartid(), mode);
     match mode {
-        FpMode::None => assert!(cfg!(feature = "fp-none"), "Full FP emulation is not enabled"),
+        FpMode::None => assert!(
+            cfg!(feature = "fp-none"),
+            "Full FP emulation is not enabled"
+        ),
         FpMode::Mem => assert!(cfg!(feature = "fp-mem"), "FP emulation is not enabled"),
         _ => (),
     }

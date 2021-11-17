@@ -167,7 +167,7 @@ mod sys {
     }
 }
 
-use crate::io::{Error, Result as IoResult, Read, ReadAt};
+use crate::io::{Error, Read, ReadAt, Result as IoResult};
 use crate::util::OnceCell;
 use crate::{block::Block, util::uninit_slice};
 use alloc::boxed::Box;
