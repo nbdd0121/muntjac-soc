@@ -6,6 +6,8 @@ edition = "2021"
 
 [build-dependencies]
 cc = "1"
+rand = "0.8"
+macaddr = "1.0"
 
 [dependencies]
 byteorder = { version = "1", default-features = false }

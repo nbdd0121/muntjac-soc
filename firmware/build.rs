@@ -1,7 +1,9 @@
+use rand::RngCore;
 use std::env;
 use std::fs;
 use std::io::Result as IoResult;
 use std::process::Command;
+use std::str::FromStr;
 
 include!("platform.rs");
 
@@ -9,6 +11,33 @@ const MEMORY_LIMIT: u64 = MEMORY_BASE + MEMORY_SIZE;
 
 fn main() -> IoResult<()> {
     let out_dir = env::var("OUT_DIR").unwrap();
+
+    println!("cargo:rerun-if-changed=mac_address");
+    let mac_address = match fs::read_to_string("mac_address") {
+        Ok(v) => macaddr::MacAddr6::from_str(v.trim()).unwrap(),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            // Generate a MAC address if none is specified.
+            let mut mac = [0u8; 6];
+            let mut rng = rand::thread_rng();
+            rng.fill_bytes(&mut mac);
+            mac[0] = (mac[0] & 0xFE) | 0x02;
+
+            let mac = macaddr::MacAddr6::from(mac);
+            fs::write("mac_address", format!("{}\n", mac)).unwrap();
+            mac
+        }
+        Err(err) => {
+            panic!("Failed to read MAC address: {}", err);
+        }
+    };
+    fs::write(
+        format!("{}/mac_address.rs", out_dir),
+        format!(
+            "const MAC_ADDRESS: [u8; 6] = {:?};",
+            mac_address.into_array()
+        ),
+    )
+    .unwrap();
 
     // Load platform configuration
     println!("cargo:rerun-if-changed=platform.rs");
