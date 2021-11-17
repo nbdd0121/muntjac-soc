@@ -217,7 +217,7 @@ module chip_top (
     .NumLinks    (5),
     .NumAddressRange (4),
     .AddressBase ({ClintBaseAddr, PlicBaseAddr, UartBaseAddr, SdhciBaseAddr}),
-    .AddressMask ({ClintBaseMask, PlicBaseMask, UartBaseMAsk, SdhciBaseMask}),
+    .AddressMask ({ClintBaseMask, PlicBaseMask, UartBaseMask, SdhciBaseMask}),
     .AddressLink ({3'd         1, 3'd        2, 3'd        3, 3'd         4})
   ) io_socket_1n (
     .clk_i (clk),

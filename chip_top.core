@@ -61,7 +61,7 @@ filesets:
     files:
       - nexys_a7/util/vivado_create_ip.tcl
       # File copied by fusesoc into the workroot
-      - data/mig.prj: { file_type: user, copyto: mig.prj }
+      - nexys_a7/data/mig.prj: { file_type: user, copyto: mig.prj }
     file_type: tclSource
 
   files_tcl_genesys_2:
