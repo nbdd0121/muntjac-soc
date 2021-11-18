@@ -39,29 +39,31 @@ module ddr #(
   // Clock wizard
 
   wire mig_input_clk;
-  wire mig_input_clk_locked;
 
   clk_wiz_ddr clk_wiz (
     .clk_in1  (sys_clk_i),
     .resetn   (sys_rst_ni),
     .clk_out1 (mig_input_clk),
-    .locked   (mig_input_clk_locked)
+    .clk_out2 (clk_o),
+    .clk_out3 (io_clk_o),
+    .locked   (rst_no)
   );
 
   wire mig_clk;
+  wire mig_clk_rstn;
 
   mig_7series_0 ddr_ctrl (
     // Clock
     .sys_clk_i       (mig_input_clk),
-    .sys_rst         (mig_input_clk_locked),
+    .sys_rst         (rst_no),
     .ui_clk          (mig_clk),
     .ui_clk_sync_rst (),
-    .ui_addn_clk_0   (clk_o),
-    .ui_addn_clk_1   (io_clk_o),
+    .ui_addn_clk_0   (),
+    .ui_addn_clk_1   (),
     .ui_addn_clk_2   (),
     .ui_addn_clk_3   (),
     .ui_addn_clk_4   (),
-    .mmcm_locked     (rst_no),
+    .mmcm_locked     (mig_clk_rstn),
     // DDR interface
     .ddr2_addr  (ddr2_sdram_addr),
     .ddr2_ba    (ddr2_sdram_ba),
@@ -117,6 +119,7 @@ module ddr #(
     .s_axi_wlast   (axi_w.last),
     .s_axi_wstrb   (axi_w.strb),
     // Other signals
+    .device_temp_i       ('0),
     .app_sr_req          ('0),
     .app_sr_active       (  ),
     .app_ref_req         ('0),
@@ -173,7 +176,7 @@ module ddr #(
     .s_axi_wlast    (axi_sync_w.last),
     .s_axi_wstrb    (axi_sync_w.strb),
     .m_axi_aclk     (mig_clk),
-    .m_axi_aresetn  (rst_no),
+    .m_axi_aresetn  (mig_clk_rstn),
     .m_axi_arready  (axi_ar_ready),
     .m_axi_arvalid  (axi_ar_valid),
     .m_axi_araddr   (axi_ar.addr),
