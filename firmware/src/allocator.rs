@@ -24,7 +24,9 @@ unsafe impl GlobalAlloc for ScopedAllocator {
         match *guard {
             None => panic!("no allocation scope active"),
             Some(ref mut block) => {
-                let ret = (block.ptr + layout.align() - 1) & !(layout.align() - 1);
+                // Have the alignment be at least 8 for easier handling and better performance.
+                let align = core::cmp::max(layout.align(), 8);
+                let ret = (block.ptr + align - 1) & !(align - 1);
                 let new_ptr = ret + layout.size();
                 if new_ptr > block.end {
                     return core::ptr::null_mut();

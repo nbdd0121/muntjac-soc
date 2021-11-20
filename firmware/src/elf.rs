@@ -85,6 +85,8 @@ impl Loader {
     }
 
     pub fn new(ptr: *const u8) -> Loader {
+        // Must be properly aligned.
+        assert!(ptr as usize % 8 == 0);
         Loader { memory: ptr }
     }
 
