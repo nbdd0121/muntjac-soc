@@ -19,6 +19,7 @@ filesets:
       - lowrisc:tl:ram_terminator
       - lowrisc:tl:io_terminator
       - lowrisc:tl:error_sink
+      - lowrisc:axi:tl_adapter
     files:
       - rtl/spi.sv
       - rtl/uart.sv
@@ -34,11 +35,10 @@ filesets:
     files:
       - nexys_a7/rtl/chip_top.sv
       - nexys_a7/rtl/ddr.sv
+      - nexys_a7/rtl/eth.sv
     file_type: systemVerilogSource
 
   files_rtl_genesys_2:
-    depend:
-      - lowrisc:axi:tl_adapter
     files:
       - genesys_2/rtl/chip_top.sv
       - genesys_2/rtl/ddr.sv
@@ -60,6 +60,7 @@ filesets:
   files_tcl_nexys_a7:
     files:
       - nexys_a7/util/vivado_create_ip.tcl
+      - nexys_a7/util/create_eth_ip.tcl
       # File copied by fusesoc into the workroot
       - nexys_a7/data/mig.prj: { file_type: user, copyto: mig.prj }
     file_type: tclSource

@@ -17,6 +17,17 @@ module chip_top (
   inout  [3:0] sd_dat,
   output       sd_reset,
   output       sd_sck,
+  // Ethernet
+  output       mdc,
+  inout        mdio,
+  output       rmii_ref_clk,
+  output [1:0] rmii_txd,
+  output       rmii_tx_en,
+  input  [1:0] rmii_rxd,
+  input        rmii_csr_dv,
+  input        rmii_rx_er,
+  output       phy_rst_n,
+  input        phy_irq_i,
   // DDR
   output [12:0] ddr2_sdram_addr,
   output [2:0]  ddr2_sdram_ba,
@@ -53,16 +64,6 @@ module chip_top (
 
   /////////////////
   // #region DMA //
-
-  // No IO devices can perform DMA just yet.
-  assign dma_tl_a_valid = 1'b0;
-  assign dma_tl_a = 'x;
-  assign dma_tl_b_ready = 1'b0;
-  assign dma_tl_c_valid = 1'b0;
-  assign dma_tl_c = 'x;
-  assign dma_tl_d_ready = 1'b0;
-  assign dma_tl_e_valid = 1'b0;
-  assign dma_tl_e = 'x;
 
   // #endregion
   /////////////////
@@ -196,7 +197,7 @@ module chip_top (
   ///////////////////////
   // #region IO Switch //
 
-  `TL_DECLARE_ARR(64, AddrWidth, DeviceSourceWidth, 1, io_ch, [4:0]);
+  `TL_DECLARE_ARR(64, AddrWidth, DeviceSourceWidth, 1, io_ch, [5:0]);
 
   localparam [AddrWidth-1:0] PlicBaseAddr  = 'h11000000;
   localparam [AddrWidth-1:0] PlicBaseMask  = 'h  3FFFFF;
@@ -210,15 +211,20 @@ module chip_top (
   localparam [AddrWidth-1:0] SdhciBaseAddr = 'h10010000;
   localparam [AddrWidth-1:0] SdhciBaseMask = 'h     FFF;
 
+  localparam [AddrWidth-1:0] EthMacBaseAddr = 'h10100000;
+  localparam [AddrWidth-1:0] EthMacBaseMask = 'h   3FFFF;
+  localparam [AddrWidth-1:0] EthDmaBaseAddr = 'h10200000;
+  localparam [AddrWidth-1:0] EthDmaBaseMask = 'h     3FF;
+
   tl_socket_1n #(
     .SourceWidth (DeviceSourceWidth),
     .AddrWidth (AddrWidth),
     .DataWidth (64),
-    .NumLinks    (5),
-    .NumAddressRange (4),
-    .AddressBase ({ClintBaseAddr, PlicBaseAddr, UartBaseAddr, SdhciBaseAddr}),
-    .AddressMask ({ClintBaseMask, PlicBaseMask, UartBaseMask, SdhciBaseMask}),
-    .AddressLink ({3'd         1, 3'd        2, 3'd        3, 3'd         4})
+    .NumLinks    (6),
+    .NumAddressRange (6),
+    .AddressBase ({ClintBaseAddr, PlicBaseAddr, UartBaseAddr, SdhciBaseAddr, EthMacBaseAddr, EthDmaBaseAddr}),
+    .AddressMask ({ClintBaseMask, PlicBaseMask, UartBaseMask, SdhciBaseMask, EthMacBaseMask, EthDmaBaseMask}),
+    .AddressLink ({3'd         1, 3'd        2, 3'd        3, 3'd         4, 3'd          5, 3'd          5})
   ) io_socket_1n (
     .clk_i (clk),
     .rst_ni (rstn),
@@ -370,6 +376,84 @@ module chip_top (
   // #endregion
   ///////////////////
 
+  //////////////////////
+  // #region Ethernet //
+
+  `TL_DECLARE(32, 28, DeviceSourceWidth, 1, eth_io);
+  `TL_DECLARE(64, 32, DmaSourceWidth, SinkWidth, eth_dma);
+
+   logic eth_irq;
+   logic dma_tx_irq;
+   logic dma_rx_irq;
+   logic phy_irq;
+
+  eth #(
+    .IoDataWidth (32),
+    .IoAddrWidth (28),
+    .IoSourceWidth (DeviceSourceWidth),
+    .DmaSourceWidth (DmaSourceWidth),
+    .DmaSinkWidth (SinkWidth)
+  ) eth (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    .io_clk_i (io_clk),
+    .mdc,
+    .mdio,
+    .rmii_ref_clk,
+    .rmii_txd,
+    .rmii_tx_en,
+    .rmii_rxd,
+    .rmii_csr_dv,
+    .rmii_rx_er,
+    .phy_rst_n,
+    .phy_irq (phy_irq_i),
+    `TL_CONNECT_DEVICE_PORT(io, eth_io),
+    `TL_CONNECT_HOST_PORT(dma, eth_dma),
+    .eth_irq_o (eth_irq),
+    .dma_tx_irq_o (dma_tx_irq),
+    .dma_rx_irq_o (dma_rx_irq),
+    .phy_irq_o (phy_irq)
+  );
+
+  tl_adapter #(
+    .HostDataWidth (64),
+    .DeviceDataWidth (32),
+    .HostAddrWidth (AddrWidth),
+    .DeviceAddrWidth (28),
+    .HostSourceWidth (DeviceSourceWidth),
+    .DeviceSourceWidth (DeviceSourceWidth),
+    .HostSinkWidth (1),
+    .DeviceSinkWidth (1),
+    .HostMaxSize (3),
+    .DeviceMaxSize (2),
+    .HostFifo (1'b0),
+    .DeviceFifo (1'b0)
+  ) eth_io_adapter (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [5]),
+    `TL_CONNECT_HOST_PORT(device, eth_io)
+  );
+
+  tl_adapter #(
+    .HostDataWidth (64),
+    .DeviceDataWidth (128),
+    .HostAddrWidth (32),
+    .DeviceAddrWidth (AddrWidth),
+    .HostSourceWidth (DmaSourceWidth),
+    .DeviceSourceWidth (DmaSourceWidth),
+    .HostSinkWidth (SinkWidth),
+    .DeviceSinkWidth (SinkWidth)
+  ) eth_dma_adapter (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    `TL_CONNECT_DEVICE_PORT(host, eth_dma),
+    `TL_CONNECT_HOST_PORT(device, dma_tl)
+  );
+
+  // #endregion
+  //////////////////////
+
   ////////////////////////
   // region IRQ routing //
 
@@ -384,6 +468,13 @@ module chip_top (
     // SD IRQ is level-triggered
     interrupts[2] = irq_sd;
     edge_trigger[1] = 1'b0;
+
+    // Ethernet IRQs are all level-triggered
+    interrupts[3] = eth_irq;
+    interrupts[4] = dma_tx_irq;
+    interrupts[5] = dma_rx_irq;
+    interrupts[6] = phy_irq;
+    edge_trigger[6:3] = 4'b0;
   end
 
   // endregion

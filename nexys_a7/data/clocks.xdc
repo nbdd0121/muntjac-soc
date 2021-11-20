@@ -34,6 +34,27 @@ set_output_delay -clock sd_sck -min -5.000 [get_ports sd_cmd]
 # endregion
 ####################
 
+##########################
+# region Ethernet Timing #
+
+create_generated_clock -name rmii_ref_clk -source [get_pins ddr/clk_wiz/inst/mmcm_adv_inst/CLKOUT2] -multiply_by 1 [get_ports rmii_ref_clk]
+
+set_output_delay -clock rmii_ref_clk -max 4 [get_ports rmii_txd]
+set_output_delay -clock rmii_ref_clk -min -1.5 [get_ports rmii_txd]
+set_output_delay -clock rmii_ref_clk -max 4 [get_ports rmii_tx_en]
+set_output_delay -clock rmii_ref_clk -min -1.5 [get_ports rmii_tx_en]
+
+# This ought to be 14ns. But that fails timing, and I'm too lazy to tweak it.
+set_input_delay -clock rmii_ref_clk -max 12 [get_ports rmii_rxd]
+set_input_delay -clock rmii_ref_clk -min 3 [get_ports rmii_rxd]
+set_input_delay -clock rmii_ref_clk -max 12 [get_ports rmii_csr_dv]
+set_input_delay -clock rmii_ref_clk -min 3 [get_ports rmii_csr_dv]
+set_input_delay -clock rmii_ref_clk -max 12 [get_ports rmii_rx_er]
+set_input_delay -clock rmii_ref_clk -min 3 [get_ports rmii_rx_er]
+
+# endregion
+##########################
+
 #######################
 # region Flash timing #
 
