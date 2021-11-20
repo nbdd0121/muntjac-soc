@@ -63,6 +63,7 @@ filesets:
       - nexys_a7/util/create_eth_ip.tcl
       # File copied by fusesoc into the workroot
       - nexys_a7/data/mig.prj: { file_type: user, copyto: mig.prj }
+      - data/mii_to_rmii_v2_0.tar : { file_type: user, copyto: mii_to_rmii_v2_0.tar }
     file_type: tclSource
 
   files_tcl_genesys_2:

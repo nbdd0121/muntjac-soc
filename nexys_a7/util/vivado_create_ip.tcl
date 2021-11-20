@@ -1,5 +1,13 @@
 set workroot [pwd]
 
+# Ensure that mii_to_rmii_v2_0 IP is extracted
+if {!([file exists "${workroot}/ip/mii_to_rmii_v2_0"])} {
+    exec mkdir -p "${workroot}/ip"
+    exec tar -xvzf "${workroot}/mii_to_rmii_v2_0.tar" -C "${workroot}/ip"
+}
+set_property ip_repo_paths [file normalize "${workroot}/ip"] [current_project]
+update_ip_catalog
+
 set_property used_in_synthesis false [get_files clocks.xdc]
 
 # Enable Retiming in synthesis
