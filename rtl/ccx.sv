@@ -5,7 +5,8 @@ module ccx import muntjac_pkg::*; #(
   parameter DmaSourceWidth = 2,
   parameter DeviceSourceWidth = 5,
   parameter SinkWidth = 1,
-  parameter AddrWidth = 56
+  parameter AddrWidth = 56,
+  parameter bit EnableHpm = 1'b0
 ) (
   input clk_i,
   input rst_ni,
@@ -106,9 +107,9 @@ module ccx import muntjac_pkg::*; #(
       .DTlbSetsWidth (0),
       .ITlbNumWays (32),
       .ITlbSetsWidth (0),
-      .MHPMCounterNum (9),
-      .MHPMICacheEnable (1'b1),
-      .MHPMDCacheEnable (1'b1)
+      .MHPMCounterNum (EnableHpm ? 9 : 0),
+      .MHPMICacheEnable (EnableHpm),
+      .MHPMDCacheEnable (EnableHpm)
     ) cpu (
       .clk_i,
       .rst_ni,
@@ -290,7 +291,7 @@ module ccx import muntjac_pkg::*; #(
     .NumCachedHosts (NumCores),
     .SourceBase (generate_llc_source_base()),
     .SourceMask (generate_llc_source_mask()),
-    .EnableHpm (1'b1)
+    .EnableHpm (EnableHpm)
   ) inst (
     .clk_i,
     .rst_ni,
