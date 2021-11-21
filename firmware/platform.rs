@@ -1,2 +1,0 @@
-const MEMORY_BASE: u64 = 0x40000000;
-const MEMORY_SIZE: u64 = 0x40000000;

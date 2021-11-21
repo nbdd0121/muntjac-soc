@@ -1,76 +1,92 @@
 use rand::RngCore;
+use regex::{Captures, Regex};
+use std::borrow::Cow;
 use std::env;
+use std::fmt::Write;
 use std::fs;
 use std::io::Result as IoResult;
 use std::process::Command;
 use std::str::FromStr;
-use std::fmt::Write;
-
-include!("platform.rs");
-
-const MEMORY_LIMIT: u64 = MEMORY_BASE + MEMORY_SIZE;
 
 fn main() -> IoResult<()> {
     let out_dir = env::var("OUT_DIR").unwrap();
 
-    println!("cargo:rerun-if-changed=mac_address");
-    let mac_address = match fs::read_to_string("mac_address") {
-        Ok(v) => macaddr::MacAddr6::from_str(v.trim()).unwrap(),
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-            // Generate a MAC address if none is specified.
-            let mut mac = [0u8; 6];
-            let mut rng = rand::thread_rng();
-            rng.fill_bytes(&mut mac);
-            mac[0] = (mac[0] & 0xFE) | 0x02;
+    // Read device tree source file.
+    // Device tree is the canonical source of truth for all the info.
+    println!("cargo:rerun-if-changed=device_tree.tpl.dts");
+    let mut dts = fs::read_to_string("device_tree.tpl.dts")?;
 
-            let mac = macaddr::MacAddr6::from(mac);
-            fs::write("mac_address", format!("{}\n", mac)).unwrap();
-            mac
+    // Extract mac address from device tree source file
+    let mac_re =
+        Regex::new(r"(mac-address\s*=\s*\[)\s*(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)")
+            .unwrap();
+    let mut mac_addr = [0u8; 6];
+    let mut need_replace = false;
+    dts = match mac_re.replace(&dts, |caps: &Captures| {
+        for i in 0..6 {
+            mac_addr[i] = u8::from_str_radix(&caps[i + 2], 16).unwrap();
         }
-        Err(err) => {
-            panic!("Failed to read MAC address: {}", err);
+
+        // Generate a MAC address if the existing one is of all zeros.
+        if mac_addr.into_iter().max().unwrap() == 0 {
+            need_replace = true;
+
+            let mut rng = rand::thread_rng();
+            rng.fill_bytes(&mut mac_addr);
+            mac_addr[0] = (mac_addr[0] & 0xFE) | 0x02;
         }
+
+        format!(
+            "{}{:02x} {:02x} {:02x} {:02x} {:02x} {:02x}",
+            &caps[1], mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]
+        )
+    }) {
+        Cow::Owned(s) => s,
+        _ => panic!("cannot find mac address in device tree"),
     };
+
+    // Extract memory size from device tree source file
+    let memory_re =
+        Regex::new(r"(memory@\w+\s*\{\s*reg\s*=\s*/bits/\s*64\s*<)\s*0x(\w+)\s*0x(\w+)").unwrap();
+    let mut memory_base = 0;
+    let mut memory_size = 0;
+    dts = match memory_re.replace(&dts, |caps: &Captures| {
+        memory_base = u64::from_str_radix(&caps[2], 16).unwrap();
+        memory_size = u64::from_str_radix(&caps[3], 16).unwrap();
+
+        // Reserve 2MB for the firmware.
+        format!(
+            "{}{:#010x} {:#010x}",
+            &caps[1],
+            memory_base,
+            memory_size - 0x200000
+        )
+    }) {
+        Cow::Owned(s) => s,
+        _ => panic!("cannot find memory block in device tree"),
+    };
+    let memory_limit = memory_base + memory_size;
+
     fs::write(
         format!("{}/mac_address.rs", out_dir),
-        format!(
-            "const MAC_ADDRESS: [u8; 6] = {:?};",
-            mac_address.into_array()
-        ),
+        format!("const MAC_ADDRESS: [u8; 6] = {:?};", mac_addr),
     )
     .unwrap();
-    let mut mac_address_for_dt = "[".to_string();
-    for (i, byte) in mac_address.into_array().into_iter().enumerate() {
-        if i != 0 {
-            mac_address_for_dt.push(' ');
-        }
-        write!(mac_address_for_dt, "{:02x}", byte).unwrap();
-    }
-    mac_address_for_dt.push(']');
-
-    // Load platform configuration
-    println!("cargo:rerun-if-changed=platform.rs");
 
     // Generate for assembly use
     let platform_h = format!(
         "#define MEMORY_BASE {:#x}
 #define MEMORY_LIMIT {:#x}",
-        MEMORY_BASE, MEMORY_LIMIT,
+        memory_base, memory_limit,
     );
     fs::write(format!("{}/platform.h", out_dir), platform_h).unwrap();
 
     // Generate the linker script
     println!("cargo:rerun-if-changed=linker.tpl.ld");
     let tpl = fs::read_to_string("linker.tpl.ld").unwrap();
-    let ld = tpl.replace("${MEMORY_LIMIT}", &format!("{:#x}", MEMORY_LIMIT));
+    let ld = tpl.replace("${MEMORY_LIMIT}", &format!("{:#x}", memory_limit));
     fs::write("linker.ld", ld).unwrap();
 
-    println!("cargo:rerun-if-changed=device_tree.tpl.dts");
-    let tpl = fs::read_to_string("device_tree.tpl.dts").unwrap();
-    let dts = tpl
-        .replace("${MEMORY_BASE}", &format!("{:x}", MEMORY_BASE))
-        .replace("${MEMORY_SIZE}", &format!("{:x}", MEMORY_SIZE - 0x200000))
-        .replace("${MAC_ADDRESS}", &mac_address_for_dt);
     fs::write("device_tree.dts", dts).unwrap();
     let dtb = format!("{}/device_tree.dtb", out_dir);
     let status = Command::new("dtc")
