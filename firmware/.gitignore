@@ -1,6 +1,4 @@
 /target
 /device_tree.dts
 /linker.ld
-/firmware.bin
-/firmware.elf
 /Cargo.lock

@@ -1,3 +1,5 @@
 /build
+/*/device_tree.dts
+/*/firmware.*
 vivado*.log
 vivado*.jou
