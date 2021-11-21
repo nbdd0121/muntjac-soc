@@ -2,19 +2,17 @@ use rand::RngCore;
 use regex::{Captures, Regex};
 use std::borrow::Cow;
 use std::env;
-use std::fmt::Write;
 use std::fs;
 use std::io::Result as IoResult;
 use std::process::Command;
-use std::str::FromStr;
 
 fn main() -> IoResult<()> {
     let out_dir = env::var("OUT_DIR").unwrap();
 
     // Read device tree source file.
     // Device tree is the canonical source of truth for all the info.
-    println!("cargo:rerun-if-changed=device_tree.tpl.dts");
-    let mut dts = fs::read_to_string("device_tree.tpl.dts")?;
+    let dts_file = env::var("DTS").unwrap();
+    let mut dts = fs::read_to_string(&dts_file)?;
 
     // Extract mac address from device tree source file
     let mac_re =
@@ -44,6 +42,10 @@ fn main() -> IoResult<()> {
         Cow::Owned(s) => s,
         _ => panic!("cannot find mac address in device tree"),
     };
+
+    if need_replace {
+        fs::write(dts_file, &dts)?;
+    }
 
     // Extract memory size from device tree source file
     let memory_re =
