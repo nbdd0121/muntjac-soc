@@ -112,6 +112,7 @@
             xlnx,rxmem = <0x1000>;
             xlnx,txcsum = <2>;
             phy-handle = <&phy1>;
+            local-mac-address = ${MAC_ADDRESS};
             mdio {
                 #address-cells = <1>;
                 #size-cells = <0>;

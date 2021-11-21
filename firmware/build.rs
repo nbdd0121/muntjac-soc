@@ -4,6 +4,7 @@ use std::fs;
 use std::io::Result as IoResult;
 use std::process::Command;
 use std::str::FromStr;
+use std::fmt::Write;
 
 include!("platform.rs");
 
@@ -38,6 +39,14 @@ fn main() -> IoResult<()> {
         ),
     )
     .unwrap();
+    let mut mac_address_for_dt = "[".to_string();
+    for (i, byte) in mac_address.into_array().into_iter().enumerate() {
+        if i != 0 {
+            mac_address_for_dt.push(' ');
+        }
+        write!(mac_address_for_dt, "{:02x}", byte).unwrap();
+    }
+    mac_address_for_dt.push(']');
 
     // Load platform configuration
     println!("cargo:rerun-if-changed=platform.rs");
@@ -60,7 +69,8 @@ fn main() -> IoResult<()> {
     let tpl = fs::read_to_string("device_tree.tpl.dts").unwrap();
     let dts = tpl
         .replace("${MEMORY_BASE}", &format!("{:x}", MEMORY_BASE))
-        .replace("${MEMORY_SIZE}", &format!("{:x}", MEMORY_SIZE - 0x200000));
+        .replace("${MEMORY_SIZE}", &format!("{:x}", MEMORY_SIZE - 0x200000))
+        .replace("${MAC_ADDRESS}", &mac_address_for_dt);
     fs::write("device_tree.dts", dts).unwrap();
     let dtb = format!("{}/device_tree.dtb", out_dir);
     let status = Command::new("dtc")
