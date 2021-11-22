@@ -62,6 +62,7 @@ pub fn panic(info: &PanicInfo<'_>) -> ! {
     super::abort();
 }
 
+#[allow(dead_code)]
 pub fn catch_unwind<R, F: FnOnce() -> R>(f: F) -> Result<R, ()> {
     panicking::catch_unwind::<Panic, _, _>(f).map_err(|_| ())
 }

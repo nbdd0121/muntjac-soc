@@ -280,38 +280,6 @@ fn handle_illegal_insn(ctx: &mut Context) {
     }
 }
 
-#[allow(unused)]
-unsafe fn debug(addr: usize) {
-    let satp: usize;
-    asm!("csrr {}, satp", out(reg) satp, options(nomem, nostack));
-    println!("SATP = 0x{:x}", satp);
-
-    if satp as i64 > 0 {
-        return;
-    }
-
-    let root_page_table = ((satp & ((1 << 44) - 1)) << 12) as *const u64;
-    let l1_ptr = root_page_table.add((addr >> 30) & 0x1FF);
-    let l1 = *l1_ptr;
-    println!("L1({:?}) = 0x{:x}", l1_ptr, l1);
-    if (l1 & 1) == 0 || l1 & 14 != 0 {
-        return;
-    }
-
-    let l1_page_table = ((l1 << 2) & !0xFFF) as *const u64;
-    let l2_ptr = l1_page_table.add((addr >> 21) & 0x1FF);
-    let l2 = *l2_ptr;
-    println!("L2({:?}) = 0x{:x}", l2_ptr, l2);
-    if (l2 & 1) == 0 || l2 & 14 != 0 {
-        return;
-    }
-
-    let l2_page_table = ((l2 << 2) & !0xFFF) as *const u64;
-    let l3_ptr = l2_page_table.add((addr >> 12) & 0x1FF);
-    let l3 = *l3_ptr;
-    println!("L3({:?}) = 0x{:x}", l3_ptr, l3);
-}
-
 // Try to handle fast interrupts (non-volatile registers are not saved in ctx)
 #[no_mangle]
 extern "C" fn handle_interrupt_fast(cause: usize, ctx: &mut Context) -> bool {
@@ -327,32 +295,10 @@ extern "C" fn handle_interrupt_fast(cause: usize, ctx: &mut Context) -> bool {
                 asm!("csrs mip, {}", in(reg) 1 << 5, options(nomem, nostack));
             }
         }
-        /*  0x800000000000000b => {
-            let addr = 0xffffffe0000321bc;
-            unsafe { debug(addr) };
-        }*/
         9 => {
             sbi::handle_sbi(ctx);
             // ECALL is 4 bytes
             ctx.pc += 4;
-        }
-        // Page fault. We can only get these in memory::*.
-        12 | 13 | 15 => {
-            let tval = unsafe {
-                let v: usize;
-                asm!("csrr {}, mtval", out(reg) v, options(nomem, nostack));
-                v
-            };
-            let mstatus = unsafe {
-                let v: usize;
-                asm!("csrr {}, mstatus", out(reg) v, options(nomem, nostack));
-                v
-            };
-            println!(
-                "cause={:x}, pc = {:x}, tval = {:x}, mstatus = {:x}",
-                cause, ctx.pc, tval, mstatus
-            );
-            delegate_interrupt(ctx, TrapInfo { cause, tval });
         }
         _ => return false,
     }
