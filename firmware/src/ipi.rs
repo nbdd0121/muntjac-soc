@@ -60,18 +60,16 @@ fn enable_irq() {
     }
 }
 
-fn run_on_hart_common(mask: HartMask, f: &'static (dyn Fn() + Sync), wait: bool) -> u32 {
+fn run_on_hart_common(
+    mask: HartMask,
+    f: &'static (dyn Fn() + Sync),
+    wait: Option<&'static AtomicU32>,
+) -> u32 {
     let cur_id = super::hartid();
     let mut wait_num = 0;
     for hart_id in 0..hart_count() {
         // Check the mask to determine if we need to run on this hart
-        if !mask.is_set(hart_id) {
-            continue;
-        }
-
-        // Run on current hart
-        if hart_id == cur_id {
-            f();
+        if hart_id == cur_id || !mask.is_set(hart_id) {
             continue;
         }
 
@@ -81,10 +79,7 @@ fn run_on_hart_common(mask: HartMask, f: &'static (dyn Fn() + Sync), wait: bool)
         loop {
             let mut guard = IPI_DATA[hart_id].lock();
             if guard.is_none() {
-                *guard = Some(IpiData {
-                    func: f,
-                    src: if wait { Some(cur_id) } else { None },
-                });
+                *guard = Some(IpiData { func: f, wait });
                 break;
             }
             // Some one has already send a IPI to this hart and it hasn't been processed yet.
@@ -102,44 +97,46 @@ fn run_on_hart_common(mask: HartMask, f: &'static (dyn Fn() + Sync), wait: bool)
         set_msip(hart_id, true);
     }
 
+    if mask.is_set(cur_id) {
+        f();
+    }
+
     wait_num
 }
 
 pub fn run_on_hart(mask: HartMask, f: &'static (dyn Fn() + Sync)) {
-    run_on_hart_common(mask, f, false);
+    run_on_hart_common(mask, f, None);
 }
 
 pub fn run_on_hart_wait(mask: HartMask, f: &(dyn Fn() + Sync)) {
+    let wait = AtomicU32::new(0);
+
     // This is okay, because we will wait for the call to complete. By the time wait is completed
     // we would have no copies of `f`, so this lifetime transmute is safe.
-    let wait_num = run_on_hart_common(mask, unsafe { core::mem::transmute(f) }, true);
-    let cur_id = super::hartid();
+    let wait_num = run_on_hart_common(
+        mask,
+        unsafe { core::mem::transmute(f) },
+        Some(unsafe { core::mem::transmute(&wait) }),
+    );
 
     // Wait for the response of the ACK.
     loop {
-        if IPI_ACK[cur_id].load(Ordering::Acquire) == wait_num {
+        if wait.load(Ordering::Acquire) == wait_num {
             break;
         }
         enable_irq();
         cpu_relax();
         disable_irq();
     }
-
-    IPI_ACK[cur_id].store(0, Ordering::Relaxed);
 }
 
 struct IpiData {
     func: &'static (dyn Fn() + Sync),
-    src: Option<usize>,
+    wait: Option<&'static AtomicU32>,
 }
 
 static IPI_DATA: [Mutex<Option<IpiData>>; MAX_HART_COUNT] = {
     const INIT: Mutex<Option<IpiData>> = Mutex::new(None);
-    [INIT; MAX_HART_COUNT]
-};
-
-static IPI_ACK: [AtomicU32; MAX_HART_COUNT] = {
-    const INIT: AtomicU32 = AtomicU32::new(0);
     [INIT; MAX_HART_COUNT]
 };
 
@@ -150,8 +147,8 @@ pub fn process_ipi() {
     let mut guard = IPI_DATA[cur_id].lock();
     if let Some(data) = guard.take() {
         (data.func)();
-        if let Some(src) = data.src {
-            IPI_ACK[src].fetch_add(1, Ordering::Release);
+        if let Some(wait) = data.wait {
+            wait.fetch_add(1, Ordering::Release);
         }
     }
 }
