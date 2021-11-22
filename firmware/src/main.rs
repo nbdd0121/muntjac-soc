@@ -66,6 +66,23 @@ pub struct Context {
     mstatus: usize,
 }
 
+impl core::fmt::Debug for Context {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        const NAMES: &[&str] = &[
+            "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13",
+            "x14", "x15", "x16", "x17", "x18", "x19", "x20", "x21", "x22", "x23", "x24", "x25",
+            "x26", "x27", "x28", "x29", "x30", "x31",
+        ];
+        let mut dbg = f.debug_struct("Context");
+        for i in 1..32 {
+            dbg.field(NAMES[i], &format_args!("{:#x}", self.registers[i]));
+        }
+        dbg.field("pc", &format_args!("{:#x}", self.pc))
+            .field("mstatus", &format_args!("{:#x}", self.mstatus))
+            .finish()
+    }
+}
+
 fn hartid() -> usize {
     unsafe {
         let hartid: usize;
@@ -263,14 +280,6 @@ fn handle_illegal_insn(ctx: &mut Context) {
     }
 }
 
-fn dump_context(ctx: &Context) {
-    for i in 1..32 {
-        println!("x{} = {:x}", i, ctx.registers[i]);
-    }
-    println!("pc = {:x}", ctx.pc);
-    println!("mstatus = {:x}", ctx.mstatus);
-}
-
 #[allow(unused)]
 unsafe fn debug(addr: usize) {
     let satp: usize;
@@ -353,6 +362,14 @@ extern "C" fn handle_interrupt_fast(cause: usize, ctx: &mut Context) -> bool {
 // Handle slow interrupts
 #[no_mangle]
 extern "C" fn handle_interrupt(cause: usize, ctx: &mut Context) {
+    let mpp = (ctx.mstatus >> 11) & 3;
+    if mpp > 1 {
+        panic!(
+            "unexpected trap in machine mode: cause = {:x}, ctx = {:?}",
+            cause, ctx
+        );
+    }
+
     match cause {
         2 => handle_illegal_insn(ctx),
         4 => {
@@ -376,8 +393,7 @@ extern "C" fn handle_interrupt(cause: usize, ctx: &mut Context) {
             }
         }
         _ => {
-            dump_context(ctx);
-            panic!("unhandled exception cause {:x}", cause);
+            panic!("unhandled exception cause = {:x}, ctx = {:?}", cause, ctx);
         }
     }
 }
