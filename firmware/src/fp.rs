@@ -502,7 +502,7 @@ pub fn step(ctx: &mut Context, op: &Op) -> Result<(), TrapInfo> {
     macro_rules! set_rm {
         ($rm: expr) => {
             EFFECTIVE_FRM.set(if $rm == 0b111 {
-                state.read_rm() >> 5
+                state.read_rm()
             } else {
                 $rm
             });
