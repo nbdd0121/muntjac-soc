@@ -80,6 +80,11 @@
             interrupts-extended = <&cpu0_intc 0x9 &cpu1_intc 0x9>;
         };
 
+        clint@11400000 {
+            compatible = "sifive,clint0";
+            reg = /bits/ 64 <0x11400000 0x10000>;
+        };
+
         serial@10000000 {
             clock-frequency = <18432000>;
             compatible = "ns16550a";

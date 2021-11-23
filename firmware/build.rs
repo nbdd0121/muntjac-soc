@@ -2,49 +2,62 @@ use rand::RngCore;
 use regex::{Captures, Regex};
 use std::borrow::Cow;
 use std::env;
+use std::fmt::Write;
 use std::fs;
-use std::io::Result as IoResult;
 use std::process::Command;
 
-fn main() -> IoResult<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var("OUT_DIR").unwrap();
 
     // Read device tree source file.
     // Device tree is the canonical source of truth for all the info.
-    let dts_file = env::var("DTS").unwrap();
-    let mut dts = fs::read_to_string(&dts_file)?;
+    let master_dts_file = env::var("DTS").unwrap();
+    let mut dts = fs::read_to_string(&master_dts_file)?;
+    let dts_file = "device_tree.dts";
+    let dtb_file = format!("{}/device_tree.dtb", out_dir);
+
+    // Compile master device tree source into binary and load it.
+    let status = Command::new("dtc")
+        .args(&[&master_dts_file, "-o", &dtb_file])
+        .status()
+        .expect("failed to execute fdt");
+    assert!(status.success());
+    let fdt = fs::read(&dtb_file)?;
+    let fdt = fdt::Fdt::new(&fdt).unwrap();
 
     // Extract mac address from device tree source file
     let mac_re =
         Regex::new(r"(mac-address\s*=\s*\[)\s*(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)")
             .unwrap();
-    let mut mac_addr = [0u8; 6];
+    let mut mac_addr = None;
     let mut need_replace = false;
-    dts = match mac_re.replace(&dts, |caps: &Captures| {
-        for i in 0..6 {
-            mac_addr[i] = u8::from_str_radix(&caps[i + 2], 16).unwrap();
-        }
+    dts = mac_re
+        .replace(&dts, |caps: &Captures| {
+            let mut mac = [0u8; 6];
+            for i in 0..6 {
+                mac[i] = u8::from_str_radix(&caps[i + 2], 16).unwrap();
+            }
 
-        // Generate a MAC address if the existing one is of all zeros.
-        if mac_addr.into_iter().max().unwrap() == 0 {
-            need_replace = true;
+            // Generate a MAC address if the existing one is of all zeros.
+            if mac.into_iter().max().unwrap() == 0 {
+                need_replace = true;
 
-            let mut rng = rand::thread_rng();
-            rng.fill_bytes(&mut mac_addr);
-            mac_addr[0] = (mac_addr[0] & 0xFE) | 0x02;
-        }
+                let mut rng = rand::thread_rng();
+                rng.fill_bytes(&mut mac);
+                mac[0] = (mac[0] & 0xFE) | 0x02;
+            }
 
-        format!(
-            "{}{:02x} {:02x} {:02x} {:02x} {:02x} {:02x}",
-            &caps[1], mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]
-        )
-    }) {
-        Cow::Owned(s) => s,
-        _ => panic!("cannot find mac address in device tree"),
-    };
+            mac_addr = Some(mac);
+
+            format!(
+                "{}{:02x} {:02x} {:02x} {:02x} {:02x} {:02x}",
+                &caps[1], mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
+            )
+        })
+        .into_owned();
 
     if need_replace {
-        fs::write(dts_file, &dts)?;
+        fs::write(master_dts_file, &dts)?;
     }
 
     // Extract memory size from device tree source file
@@ -69,11 +82,83 @@ fn main() -> IoResult<()> {
     };
     let memory_limit = memory_base + memory_size;
 
-    fs::write(
-        format!("{}/mac_address.rs", out_dir),
-        format!("const MAC_ADDRESS: [u8; 6] = {:?};", mac_addr),
-    )
-    .unwrap();
+    // Find the address of CLINT and remove that node.
+    let clint_base;
+    {
+        let node = fdt
+            .find_compatible(&["sifive,clint0"])
+            .expect("cannot find CLINT node");
+        let reg = node.raw_reg().unwrap().next().unwrap();
+        clint_base = u64::from_be_bytes(reg.address.try_into()?);
+
+        let re = Regex::new(&format!(r"{}\s*\{{[^}}]*\}}\s*;\s*", node.name)).unwrap();
+        dts = re.replace(&dts, "").into_owned();
+    };
+
+    // Compile modified device tree source into binary.
+    fs::write(&dts_file, dts)?;
+    let status = Command::new("dtc")
+        .args(&[&dts_file, "-o", &dtb_file])
+        .status()
+        .expect("failed to execute fdt");
+    assert!(status.success());
+
+    let mut generated_rs = String::new();
+
+    let num_harts = fdt.cpus().count();
+    writeln!(generated_rs, "pub const NUM_HARTS: usize = {};", num_harts)?;
+
+    writeln!(
+        generated_rs,
+        "pub const MEMORY_BASE: usize = {:#x};",
+        memory_base
+    )?;
+    writeln!(
+        generated_rs,
+        "pub const MEMORY_SIZE: usize = {:#x};",
+        memory_size
+    )?;
+    writeln!(
+        generated_rs,
+        "pub const CLINT_BASE: usize = {:#x};",
+        clint_base
+    )?;
+
+    // Extract UART address.
+    if let Some(node) = fdt.find_compatible(&["ns16550a"]) {
+        let reg = node.raw_reg().unwrap().next().unwrap();
+        let base = u64::from_be_bytes(reg.address.try_into()?);
+        writeln!(generated_rs, "pub const UART_BASE: usize = {:#x};", base)?;
+    }
+
+    if let Some(node) = fdt.find_compatible(&["sdhci-generic"]) {
+        let reg = node.raw_reg().unwrap().next().unwrap();
+        let base = u64::from_be_bytes(reg.address.try_into()?);
+        writeln!(generated_rs, "pub const SD_BASE: usize = {:#x};", base)?;
+    }
+
+    if let Some(node) = fdt.find_compatible(&["xlnx,axi-ethernet-1.00.a"]) {
+        let mut regs = node.raw_reg().unwrap();
+        let mac_base = u64::from_be_bytes(regs.next().unwrap().address.try_into()?);
+        let dma_base = u64::from_be_bytes(regs.next().unwrap().address.try_into()?);
+        writeln!(
+            generated_rs,
+            "pub const ETH_MAC_BASE: usize = {:#x};",
+            mac_base
+        )?;
+        writeln!(
+            generated_rs,
+            "pub const ETH_DMA_BASE: usize = {:#x};",
+            dma_base
+        )?;
+        writeln!(
+            generated_rs,
+            "pub const MAC_ADDRESS: [u8; 6] = {:?};",
+            mac_addr.expect("Ethernet controller exists but not a mac address")
+        )?;
+    }
+
+    fs::write(format!("{}/address.rs", out_dir), generated_rs)?;
 
     // Generate for assembly use
     let platform_h = format!(
@@ -88,14 +173,6 @@ fn main() -> IoResult<()> {
     let tpl = fs::read_to_string("linker.tpl.ld").unwrap();
     let ld = tpl.replace("${MEMORY_LIMIT}", &format!("{:#x}", memory_limit));
     fs::write("linker.ld", ld).unwrap();
-
-    fs::write("device_tree.dts", dts).unwrap();
-    let dtb = format!("{}/device_tree.dtb", out_dir);
-    let status = Command::new("dtc")
-        .args(&["device_tree.dts", "-o", &dtb])
-        .status()
-        .expect("failed to execute fdt");
-    assert!(status.success());
 
     let mut cc = cc::Build::new();
     println!("cargo:rerun-if-changed=src/entry.S");

@@ -30,7 +30,12 @@ mod memtest;
 mod fp;
 
 #[allow(unused)]
-mod address;
+mod address {
+    include!(concat!(env!("OUT_DIR"), "/address.rs"));
+
+    pub const MAX_HART_COUNT: usize = 4;
+}
+
 mod allocator;
 #[allow(unused)]
 mod elf;

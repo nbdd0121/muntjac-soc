@@ -15,8 +15,6 @@ pub fn with_sockets<R>(f: impl FnOnce(&mut SocketSet<'static>) -> R) -> R {
     f(SOCKETS.lock().as_mut().unwrap())
 }
 
-include!(concat!(env!("OUT_DIR"), "/mac_address.rs"));
-
 pub fn load_kernel() -> Vec<u8> {
     use alloc::collections::BTreeMap;
     use core::future::Future;
@@ -29,9 +27,15 @@ pub fn load_kernel() -> Vec<u8> {
 
     use xae::XilinxAxiEthernet;
 
-    let device = unsafe { XilinxAxiEthernet::new(0x10100000, 0x10200000, MAC_ADDRESS) };
+    let device = unsafe {
+        XilinxAxiEthernet::new(
+            crate::address::ETH_MAC_BASE,
+            crate::address::ETH_DMA_BASE,
+            crate::address::MAC_ADDRESS,
+        )
+    };
 
-    let ethernet_addr = EthernetAddress(MAC_ADDRESS);
+    let ethernet_addr = EthernetAddress(crate::address::MAC_ADDRESS);
     let neighbor_cache = NeighborCache::new(BTreeMap::new());
     let ip_addrs = vec![IpCidr::new(IpAddress::v4(10, 5, 1, 128), 24)];
     let default_v4_gw = Ipv4Address::new(10, 5, 1, 1);
