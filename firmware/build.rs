@@ -128,7 +128,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(node) = fdt.find_compatible(&["ns16550a"]) {
         let reg = node.raw_reg().unwrap().next().unwrap();
         let base = u64::from_be_bytes(reg.address.try_into()?);
-        writeln!(generated_rs, "pub const UART_BASE: usize = {:#x};", base)?;
+        let offset = node
+            .property("reg-offset")
+            .map(|p| u32::from_be_bytes(p.value.try_into().unwrap()))
+            .unwrap_or(0);
+        writeln!(
+            generated_rs,
+            "pub const UART_BASE: usize = {:#x};",
+            base + offset as u64
+        )?;
     }
 
     if let Some(node) = fdt.find_compatible(&["sdhci-generic"]) {
