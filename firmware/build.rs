@@ -185,6 +185,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut cc = cc::Build::new();
     println!("cargo:rerun-if-changed=src/entry.S");
     cc.file("src/entry.S");
+    println!("cargo:rerun-if-changed=src/memcpy.S");
+    cc.file("src/memcpy.S");
+    println!("cargo:rerun-if-changed=src/memmove.S");
+    cc.file("src/memmove.S");
+    println!("cargo:rerun-if-changed=src/memset.S");
+    cc.file("src/memset.S");
     cc.include(out_dir).compile("foo");
 
     Ok(())
