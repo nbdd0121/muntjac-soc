@@ -170,18 +170,21 @@ handler:
     # Setup stack MSCRATCH
     csrrw sp, mscratch, sp
 
-    # In case of a firmware re-entry we will have mscratch set to zero. Simply read out the
-    # saved sp and we can just continue there.
-    bnez sp, 1f
-    csrr sp, mscratch
-1:
+    # In case of a firmware re-entry we will have mscratch set to zero.
+    beqz sp, 10f
 
     addi sp, sp, -256-16
-
-    # Save volatile GPRs and gp, tp
-    sd x1, 1 * 8(sp)
     sd x3, 3 * 8(sp)
     sd x4, 4 * 8(sp)
+.option push
+.option norelax
+    la gp, __global_pointer$
+    addi tp, sp, 256+16
+.option pop
+
+11:
+    # Save volatile GPRs
+    sd x1, 1 * 8(sp)
     sd x5, 5 * 8(sp)
     sd x6, 6 * 8(sp)
     sd x7, 7 * 8(sp)
@@ -201,12 +204,6 @@ handler:
     # Set mscratch to zero, indicating we're already in M-mode so can use stack directly. Also save sp.
     csrrw t0, mscratch, x0
     sd t0, 2 * 8(sp)
-
-.option push
-.option norelax
-    addi tp, sp, 256+16
-    la gp, __global_pointer$
-.option pop
 
     # Save MEPC
     csrr t0, mepc
@@ -294,3 +291,14 @@ handler:
     # Restore Stack
     ld sp, 2 * 8(sp)
     mret
+
+# M-mode interrupt reentry
+10:
+    # Read out saved SP and reuse that.
+    csrr sp, mscratch
+    addi sp, sp, -256-16
+    # GP and TP don't need to change,
+    # but save them so restore code don't need to be aware.
+    sd x3, 3 * 8(sp)
+    sd x4, 4 * 8(sp)
+    j 11b

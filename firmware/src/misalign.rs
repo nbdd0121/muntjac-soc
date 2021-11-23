@@ -19,7 +19,6 @@ pub fn handle_misaligned_read(ctx: &mut Context) -> Result<(), TrapInfo> {
     unsafe {
         asm!("csrr {}, mtval", lateout(reg) addr, options(nomem, nostack));
     }
-    // println!("Handle misalign read {:x} at {:x}", addr, ctx.pc);
     let (bits, insn) = load_instruction(ctx.pc);
 
     match insn {
@@ -60,7 +59,6 @@ pub fn handle_misaligned_write(ctx: &mut Context) -> Result<(), TrapInfo> {
     unsafe {
         asm!("csrr {}, mtval", lateout(reg) addr, options(nomem, nostack));
     }
-    // println!("Handle misalign write {:x} at {:x}", addr, ctx.pc);
     let (bits, insn) = load_instruction(ctx.pc);
 
     match insn {
