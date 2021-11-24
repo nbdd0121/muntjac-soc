@@ -29,6 +29,7 @@ struct P9Helper<'a> {
     max_count: usize,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 struct Stat {
     pub mode: u32,

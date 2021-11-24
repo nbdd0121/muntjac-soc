@@ -2,6 +2,7 @@ use super::memory;
 use super::Context;
 use crate::hart_mask::HartMask;
 
+#[allow(dead_code)]
 #[repr(isize)]
 enum SbiError {
     Failed = -1,
@@ -106,7 +107,7 @@ fn sbi_remote_sfence_vma_asid(
     Ok(0)
 }
 
-fn sbi_system_reset(reset_type: usize, reset_reason: usize) -> SbiResult {
+fn sbi_system_reset(reset_type: usize, _reset_reason: usize) -> SbiResult {
     match reset_type {
         0 => panic!("shutdown"),
         1 => panic!("cold reboot"),

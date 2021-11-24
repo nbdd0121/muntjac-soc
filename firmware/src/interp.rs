@@ -29,7 +29,6 @@ fn write_csr(ctx: &mut Context, csr: Csr, value: usize) -> Result<(), TrapInfo> 
         Csr::Fflags | Csr::Frm | Csr::Fcsr => return fp::write_csr(ctx, csr, value),
         _ => trap!(2, 0),
     }
-    Ok(())
 }
 
 pub fn step(ctx: &mut Context, op: &Op) -> Result<(), TrapInfo> {
@@ -42,16 +41,6 @@ pub fn step(ctx: &mut Context, op: &Op) -> Result<(), TrapInfo> {
             ctx.registers[rs]
         }};
     }
-    macro_rules! read_64 {
-        ($rs: expr) => {
-            read_reg!($rs) as u64
-        };
-    }
-    macro_rules! read_32 {
-        ($rs: expr) => {
-            read_reg!($rs) as u32
-        };
-    }
     macro_rules! write_reg {
         ($rd: expr, $expression:expr) => {{
             let rd = $rd as usize;
@@ -62,18 +51,6 @@ pub fn step(ctx: &mut Context, op: &Op) -> Result<(), TrapInfo> {
             if rd != 0 {
                 ctx.registers[rd] = value
             }
-        }};
-    }
-    macro_rules! write_64 {
-        ($rd: expr, $expression:expr) => {{
-            let value: u64 = $expression;
-            write_reg!($rd, value as usize)
-        }};
-    }
-    macro_rules! write_32 {
-        ($rd: expr, $expression:expr) => {{
-            let value: u32 = $expression;
-            write_reg!($rd, value as i32 as usize)
         }};
     }
 

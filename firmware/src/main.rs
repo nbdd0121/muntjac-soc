@@ -11,11 +11,13 @@ extern crate log;
 extern crate compiler_builtins_local;
 extern crate unwinding;
 
+#[allow(dead_code)]
 #[macro_use]
 mod util;
 #[macro_use]
 mod fmt;
 
+#[allow(dead_code)]
 mod block;
 mod fs;
 mod hart_mask;
@@ -24,12 +26,12 @@ mod iomem;
 mod net;
 mod panic;
 
-#[allow(unused)]
+#[allow(dead_code)]
 mod memtest;
 
 mod fp;
 
-#[allow(unused)]
+#[allow(dead_code)]
 mod address {
     include!(concat!(env!("OUT_DIR"), "/address.rs"));
 
@@ -37,28 +39,16 @@ mod address {
 }
 
 mod allocator;
-#[allow(unused)]
 mod elf;
 mod inflate;
-#[allow(unused)]
 mod interp;
-#[allow(unused)]
 mod ipi;
-#[allow(unused)]
 mod memory;
-#[allow(unused)]
 mod misalign;
-#[allow(unused)]
 mod sbi;
-#[allow(unused)]
 mod timer;
-#[allow(unused)]
+#[allow(dead_code)]
 mod uart;
-
-#[allow(unused)]
-mod config {
-    const MAX_HART: usize = 4;
-}
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
@@ -102,6 +92,64 @@ pub struct TrapInfo {
     pub tval: usize,
 }
 
+fn load_kernel() -> alloc::vec::Vec<u8> {
+    if true {
+        let time = timer::time();
+        let mut vec = net::load_kernel();
+        let elapsed = timer::time() - time;
+        info!("kernel downloaded, elapsed: {:?}", elapsed);
+
+        if inflate::is_gzip(&vec) {
+            info!("kernel is compressed with gzip");
+            let time = timer::time();
+            vec = inflate::inflate(&vec).unwrap();
+            let elapsed = timer::time() - time;
+            info!("kernel decompressed, elapsed: {:?}", elapsed);
+        }
+        vec
+    } else {
+        use alloc::sync::Arc;
+        use io::Read;
+
+        let sd = Arc::new(unsafe { block::Sd::new(crate::address::SD_BASE) });
+        sd.power_on();
+
+        // let part = Arc::new(block::Part::first_partition(sd.clone()).unwrap());
+
+        let fs = fs::ext::FileSystem::new(sd.clone()).unwrap();
+        let root = fs.root().unwrap();
+
+        let mut kernel: Option<fs::ext::File> = None;
+
+        for entry in root {
+            let entry = entry.unwrap();
+            if !entry.is_dir() {
+                println!("/{}", entry.file_name());
+
+                if entry.file_name() == "kernel" || entry.file_name() == "vmlinux" {
+                    kernel = Some(entry.open().unwrap());
+                }
+            }
+        }
+
+        let mut kernel = kernel.expect("Cannot locate kernel");
+        let size = kernel.size() as usize;
+
+        println!("Loading kernel, size = {}KiB", size / 1024);
+        let mut buffer = alloc::vec::Vec::with_capacity(size);
+        unsafe { buffer.set_len(size) };
+        let time = timer::time();
+        kernel.read_exact(&mut buffer).unwrap();
+        let elapsed = timer::time() - time;
+        println!("Elapsed: {:?}", elapsed);
+
+        drop(fs);
+        drop(sd);
+
+        buffer
+    }
+}
+
 #[no_mangle]
 extern "C" fn main(boot: bool) -> usize {
     static DTB_PTR: AtomicUsize = AtomicUsize::new(0);
@@ -140,61 +188,7 @@ extern "C" fn main(boot: bool) -> usize {
                 )
             },
             || {
-                let elf_file = if true {
-                    let time = timer::time();
-                    let mut vec = net::load_kernel();
-                    let elapsed = timer::time() - time;
-                    info!("kernel downloaded, elapsed: {:?}", elapsed);
-
-                    if inflate::is_gzip(&vec) {
-                        info!("kernel is compressed with gzip");
-                        let time = timer::time();
-                        vec = inflate::inflate(&vec).unwrap();
-                        let elapsed = timer::time() - time;
-                        info!("kernel decompressed, elapsed: {:?}", elapsed);
-                    }
-                    vec
-                } else {
-                    use alloc::sync::Arc;
-                    use io::Read;
-
-                    let sd = Arc::new(unsafe { block::Sd::new(crate::address::SD_BASE) });
-                    sd.power_on();
-
-                    // let part = Arc::new(block::Part::first_partition(sd.clone()).unwrap());
-
-                    let fs = fs::ext::FileSystem::new(sd.clone()).unwrap();
-                    let root = fs.root().unwrap();
-
-                    let mut kernel: Option<fs::ext::File> = None;
-
-                    for entry in root {
-                        let entry = entry.unwrap();
-                        if !entry.is_dir() {
-                            println!("/{}", entry.file_name());
-
-                            if entry.file_name() == "kernel" || entry.file_name() == "vmlinux" {
-                                kernel = Some(entry.open().unwrap());
-                            }
-                        }
-                    }
-
-                    let mut kernel = kernel.expect("Cannot locate kernel");
-                    let size = kernel.size() as usize;
-
-                    println!("Loading kernel, size = {}KiB", size / 1024);
-                    let mut buffer = alloc::vec::Vec::with_capacity(size);
-                    unsafe { buffer.set_len(size) };
-                    let time = timer::time();
-                    kernel.read_exact(&mut buffer).unwrap();
-                    let elapsed = timer::time() - time;
-                    println!("Elapsed: {:?}", elapsed);
-
-                    drop(fs);
-                    drop(sd);
-
-                    buffer
-                };
+                let elf_file = load_kernel();
                 let kernel_size = unsafe { elf::load_elf(&elf_file, address::MEMORY_BASE) };
                 kernel_size
             },

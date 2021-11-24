@@ -6,6 +6,7 @@ pub struct IoMem<const SIZE: usize> {
     ptr: usize,
 }
 
+#[allow(dead_code)]
 impl<const SIZE: usize> IoMem<SIZE> {
     #[inline]
     pub const unsafe fn new(ptr: usize) -> Self {
