@@ -126,12 +126,19 @@ extern "C" fn main(boot: bool) -> usize {
         // Probe number of harts available
         ipi::probe_hart_count();
 
+        let kernel_memory_size = address::MEMORY_SIZE - 0x200000;
+
         // memtest::memtest(unsafe {
-        //     core::slice::from_raw_parts_mut(0x40000000 as *mut usize, 0x07e00000 / 8)
+        //     core::slice::from_raw_parts_mut(address::MEMORY_BASE as *mut usize, kernel_memory_size / 8)
         // });
 
         let kernel_size = allocator::scoped_with_memory(
-            unsafe { core::slice::from_raw_parts_mut(0x44000000 as *mut u8, 0x03e00000) },
+            unsafe {
+                core::slice::from_raw_parts_mut(
+                    (address::MEMORY_BASE + kernel_memory_size / 2) as *mut u8,
+                    kernel_memory_size / 2,
+                )
+            },
             || {
                 let elf_file = if true {
                     let time = timer::time();
@@ -188,21 +195,16 @@ extern "C" fn main(boot: bool) -> usize {
 
                     buffer
                 };
-                let kernel_size = unsafe { elf::load_elf(&elf_file, 0x40000000) };
+                let kernel_size = unsafe { elf::load_elf(&elf_file, address::MEMORY_BASE) };
                 kernel_size
             },
         );
 
         // Copy DTB to end of kenrel.
         let dtb = include_bytes!(concat!(env!("OUT_DIR"), "/device_tree.dtb"));
-        let dtb_ptr = 0x40000000 + kernel_size;
+        let dtb_ptr = address::MEMORY_BASE + kernel_size;
         DTB_PTR.store(dtb_ptr, Ordering::Relaxed);
         unsafe { core::ptr::copy_nonoverlapping(dtb.as_ptr(), dtb_ptr as *mut u8, dtb.len()) };
-
-        // loop {
-        //     unsafe { asm!(""); }
-        //     memtest::memtest(unsafe { core::slice::from_raw_parts_mut(0x44000000 as *mut usize, 0x03e00000/8) });
-        // }
 
         println!("Control transfer to kernel");
 
