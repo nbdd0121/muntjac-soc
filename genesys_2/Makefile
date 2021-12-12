@@ -41,12 +41,12 @@ project: $(PROJECT)
 
 $(PROJECT): $(fusesoc-deps-no-sv)
 	fusesoc --cores-root=.. run --setup --target=genesys_2 --no-export garyguo.net:systems:muntjac_soc
-	make -C $(PROJECT_DIR) $(PROJECT_NAME).xpr
+	$(MAKE) -C $(PROJECT_DIR) $(PROJECT_NAME).xpr
 
 bitstream: bitstream.bit
 
 $(PROJECT_DIR)/$(PROJECT_NAME).bit: $(PROJECT)
-	make -C $(PROJECT_DIR) $(PROJECT_NAME).bit
+	$(MAKE) -C $(PROJECT_DIR) $(PROJECT_NAME).bit
 
-bitstream.bit: $(PROJECT_DIR) $(PROJECT_NAME).bit
+bitstream.bit: $(PROJECT_DIR)/$(PROJECT_NAME).bit
 	cp $< $@
