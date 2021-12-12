@@ -1,5 +1,7 @@
-/build
+/*/build
+/*/target
 /*/device_tree.dts
 /*/firmware.*
+/*/bitstream.bit
 vivado*.log
 vivado*.jou
