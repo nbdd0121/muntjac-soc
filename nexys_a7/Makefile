@@ -1,6 +1,6 @@
 default: firmware
 
-.PHONY: default firmware
+.PHONY: default firmware project bitstream
 
 CARGO_OUT_DIR=$(realpath .)/target/riscv64imac-unknown-none-elf/release
 
@@ -24,3 +24,29 @@ firmware.mcs: firmware.bin
 	vivado -mode batch -source util/generate_mcs.tcl
 
 firmware: firmware.mcs
+
+PROJECT_DIR=build/garyguo.net_systems_muntjac_soc_0.1/nexys_a7-vivado
+PROJECT_NAME=garyguo.net_systems_muntjac_soc_0.1
+PROJECT=$(PROJECT_DIR)/$(PROJECT_NAME).xpr
+
+# Files collected by FuseSoC
+fusesoc-deps=
+-include $(PROJECT_DIR)/core-deps.mk
+
+# Vivado can handle changed SystemVerilog files, so filter them out
+# TODO: How about generated files
+fusesoc-deps-no-sv=$(filter-out %.sv %.svh %.xdc,$(fusesoc-deps))
+
+project: $(PROJECT)
+
+$(PROJECT): $(fusesoc-deps-no-sv)
+	fusesoc --cores-root=.. run --setup --target=nexys_a7 --no-export garyguo.net:systems:muntjac_soc
+	make -C $(PROJECT_DIR) $(PROJECT_NAME).xpr
+
+bitstream: bitstream.bit
+
+$(PROJECT_DIR)/$(PROJECT_NAME).bit: $(PROJECT)
+	make -C $(PROJECT_DIR) $(PROJECT_NAME).bit
+
+bitstream.bit: $(PROJECT_DIR) $(PROJECT_NAME).bit
+	cp $< $@
