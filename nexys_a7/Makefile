@@ -1,6 +1,6 @@
 default: firmware
 
-.PHONY: default firmware project bitstream
+.PHONY: default firmware project bitstream program-flash-firmware program-flash
 
 CARGO_OUT_DIR=$(realpath .)/target/riscv64imac-unknown-none-elf/release
 
@@ -54,3 +54,9 @@ bitstream.bit: $(PROJECT_DIR)/$(PROJECT_NAME).bit
 
 bitstream.mcs: firmware.bin bitstream.bit
 	vivado -notrace -mode batch -source util/generate_mcs.tcl -tclargs bit
+
+program-flash-firmware: firmware.mcs
+	PART="xc7a100tcsg324-1" CFGMEM_PART="s25fl128sxxxxxx0-spi-x1_x2_x4" PROGRAM="$<" vivado -notrace -mode batch -source ../util/program_flash.tcl
+
+program-flash: bitstream.mcs
+	PART="xc7a100tcsg324-1" CFGMEM_PART="s25fl128sxxxxxx0-spi-x1_x2_x4" PROGRAM="$<" vivado -notrace -mode batch -source ../util/program_flash.tcl
