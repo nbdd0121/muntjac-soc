@@ -2,6 +2,6 @@
 /*/target
 /*/device_tree.dts
 /*/firmware.*
-/*/bitstream.bit
+/*/bitstream.*
 vivado*.log
 vivado*.jou

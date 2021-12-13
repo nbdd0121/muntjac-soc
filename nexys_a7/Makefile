@@ -21,7 +21,7 @@ firmware.bin: firmware.elf
 	riscv64-unknown-elf-objcopy $< $@ -O binary
 
 firmware.mcs: firmware.bin
-	vivado -mode batch -source util/generate_mcs.tcl
+	vivado -notrace -mode batch -source util/generate_mcs.tcl -tclargs nobit
 
 firmware: firmware.mcs
 
@@ -51,3 +51,6 @@ $(PROJECT_DIR)/$(PROJECT_NAME).bit: $(PROJECT) $(fusesoc-deps-sv)
 
 bitstream.bit: $(PROJECT_DIR)/$(PROJECT_NAME).bit
 	cp $< $@
+
+bitstream.mcs: firmware.bin bitstream.bit
+	vivado -notrace -mode batch -source util/generate_mcs.tcl -tclargs bit
