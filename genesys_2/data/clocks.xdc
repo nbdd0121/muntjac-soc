@@ -101,3 +101,13 @@ set_multicycle_path 1 -hold -from [get_clocks -of_objects [get_pins -hierarchica
 
 # endregion
 #######################
+
+###############################
+# region Bitstream properties #
+
+set_property bitstream.general.compress true [current_design]
+set_property bitstream.config.configrate 33 [current_design]
+set_property bitstream.config.spi_buswidth 4 [current_design]
+
+# endregion
+###############################
