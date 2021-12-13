@@ -35,6 +35,7 @@ fusesoc-deps=
 
 # Vivado can handle changed SystemVerilog files, so filter them out
 # TODO: How about generated files
+fusesoc-deps-sv=$(filter %.sv %.svh %.xdc,$(fusesoc-deps))
 fusesoc-deps-no-sv=$(filter-out %.sv %.svh %.xdc,$(fusesoc-deps))
 
 project: $(PROJECT)
@@ -45,8 +46,8 @@ $(PROJECT): $(fusesoc-deps-no-sv)
 
 bitstream: bitstream.bit
 
-$(PROJECT_DIR)/$(PROJECT_NAME).bit: $(PROJECT)
-	$(MAKE) -C $(PROJECT_DIR) $(PROJECT_NAME).bit
+$(PROJECT_DIR)/$(PROJECT_NAME).bit: $(PROJECT) $(fusesoc-deps-sv)
+	cd $(PROJECT_DIR); vivado -notrace -mode batch -source $(realpath ../util/generate_bitstream.tcl) $(PROJECT_NAME).xpr
 
 bitstream.bit: $(PROJECT_DIR)/$(PROJECT_NAME).bit
 	cp $< $@
