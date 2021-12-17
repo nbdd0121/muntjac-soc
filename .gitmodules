@@ -4,3 +4,8 @@
 [submodule "muntjac"]
 	path = muntjac
 	url = git@github.com:nbdd0121/muntjac.git
+[submodule "linux"]
+	path = linux
+	url = git@github.com:nbdd0121/linux.git
+	branch = riscv
+	shallow = true
