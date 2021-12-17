@@ -15,6 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut dts = fs::read_to_string(&master_dts_file)?;
     let dts_file = "device_tree.dts";
     let dtb_file = format!("{}/device_tree.dtb", out_dir);
+    println!("cargo:rerun-if-changed={}", master_dts_file);
 
     // Compile master device tree source into binary and load it.
     let status = Command::new("dtc")
