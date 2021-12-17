@@ -140,7 +140,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?;
     }
 
-    if let Some(node) = fdt.find_compatible(&["sdhci-generic"]) {
+    if let Some(node) = fdt.find_compatible(&["garyguo,sdhci"]) {
         let reg = node.raw_reg().unwrap().next().unwrap();
         let base = u64::from_be_bytes(reg.address.try_into()?);
         writeln!(generated_rs, "pub const SD_BASE: usize = {:#x};", base)?;

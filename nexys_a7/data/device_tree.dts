@@ -97,7 +97,7 @@
         };
 
         mmc@10010000 {
-            compatible = "sdhci-generic";
+            compatible = "garyguo,sdhci";
             reg = <0x00 0x10010000 0x00 0x1000>;
             interrupts-extended = <&plic 0x2>;
         };
