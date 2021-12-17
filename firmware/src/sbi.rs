@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use super::memory;
 use super::Context;
 use crate::hart_mask::HartMask;

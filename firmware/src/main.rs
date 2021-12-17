@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(asm)]
 #![feature(thread_local)]
 #![feature(default_alloc_error_handler)]
 
@@ -50,6 +49,7 @@ mod timer;
 #[allow(dead_code)]
 mod uart;
 
+use core::arch::asm;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use self::ipi::hart_count;

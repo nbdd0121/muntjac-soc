@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use super::TrapInfo;
 
 fn load_u16_with_flag(addr: usize, flag: usize) -> Result<u16, TrapInfo> {

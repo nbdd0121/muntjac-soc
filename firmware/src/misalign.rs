@@ -1,7 +1,8 @@
+use core::arch::asm;
+use riscv::Op;
+
 use super::memory;
 use super::{Context, TrapInfo};
-
-use riscv::Op;
 
 fn load_instruction(pc: usize) -> (u32, Op) {
     let bits_lo = memory::load_u16_exec(pc).unwrap();

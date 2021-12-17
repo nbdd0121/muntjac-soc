@@ -1,3 +1,4 @@
+use core::arch::asm;
 use core::cell::Cell;
 use core::cell::RefCell;
 use riscv::{Csr, Op};
