@@ -1,3 +1,4 @@
+/vmlinux*
 /*/build
 /*/target
 /*/device_tree.dts
