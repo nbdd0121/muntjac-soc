@@ -32,21 +32,22 @@ if [ ! -z "$MISSING_PKG" ]; then
     fi
 fi
 
-# Creating an image file for rootfs
+# Ensure the image already exists. Creating it as root will cause ownership issue.
+if [ ! -f "rootfs.img" ]; then
+    echo "E: rootfs.img does not exist"
+fi
 
-if [ -f "rootfs.img" ]; then
-    echo "W: rootfs.img already exists"
+# If the image is already formatted then warn before overwriting
+if file -s rootfs.img | grep -q "ext4 filesystem data"; then
     read -p "Do you want to overwrite it? [y/N] " -n 1 -r
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        rm -f rootfs.img
-    else
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         exit 1
     fi
 fi
 
-echo "I: Creating rootfs image"
-# Create a 2GiB file
+echo "I: Reserving space for the rootfs image"
+# Allocate 2GiB
 fallocate -l 2G rootfs.img
 
 # Format the image with ext4

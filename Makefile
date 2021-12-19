@@ -11,4 +11,5 @@ vmlinux.gz: vmlinux
 	gzip < $< > $@
 
 rootfs.img: data/debian_packages.txt
+	touch -a $@
 	util/create_rootfs.sh
