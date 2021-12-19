@@ -1,5 +1,8 @@
 PREFIX = riscv64-unknown-linux-gnu-
 
+linux/.config:
+	cp data/linux.config $@
+
 vmlinux: linux/.config
 	cd linux; $(MAKE) CROSS_COMPILE=$(PREFIX) ARCH=riscv
 	$(PREFIX)strip linux/vmlinux -o $@
@@ -7,5 +10,5 @@ vmlinux: linux/.config
 vmlinux.gz: vmlinux
 	gzip < $< > $@
 
-linux/.config:
-	cp data/linux.config $@
+rootfs.img: data/debian_packages.txt
+	util/create_rootfs.sh

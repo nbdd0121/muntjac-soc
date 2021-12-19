@@ -1,0 +1,16 @@
+automake
+build-essential
+ethtool
+file
+gettext
+gdb
+initramfs-tools
+iperf3
+ntpdate
+openssh-server
+pkg-config
+psmisc
+python3
+strace
+sudo
+vim
