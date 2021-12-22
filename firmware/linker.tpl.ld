@@ -4,19 +4,7 @@ ENTRY(_start)
 
 SECTIONS
 {
-  /* Read-only sections, merged into text segment: */
   . = ${MEMORY_LIMIT} - 0x200000;
-
-
-  .interp         : { *(.interp) }
-  .note.gnu.build-id  : { *(.note.gnu.build-id) }
-  .hash           : { *(.hash) }
-  .gnu.hash       : { *(.gnu.hash) }
-  .dynsym         : { *(.dynsym) }
-  .dynstr         : { *(.dynstr) }
-  .gnu.version    : { *(.gnu.version) }
-  .gnu.version_d  : { *(.gnu.version_d) }
-  .gnu.version_r  : { *(.gnu.version_r) }
 
   __text_start = .;
   __executable_start = .;
@@ -24,29 +12,23 @@ SECTIONS
 
   .text           :
   {
-    *(.text.unlikely .text.*_unlikely .text.unlikely.*)
-    *(.text.exit .text.exit.*)
+    *(.text.unlikely .text.unlikely.*)
     *(.text.startup .text.startup.*)
-    *(.text.hot .text.hot.*)
-    *(.text .stub .text.* .gnu.linkonce.t.*)
-    /* .gnu.warning sections are handled specially by elf32.em.  */
-    *(.gnu.warning)
+    *(.text .text.*)
   }
   PROVIDE (__etext = .);
   PROVIDE (_etext = .);
   PROVIDE (etext = .);
-  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
-  .rodata1        : { *(.rodata1) }
+  .rodata         : { *(.rodata .rodata.*) }
   .sdata2         :
   {
-    *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
+    *(.sdata2 .sdata2.*)
   }
-  .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) }
+  .sbss2          : { *(.sbss2 .sbss2.*) }
   . = ALIGN(64 / 8);
   .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
   .eh_frame       : { KEEP (*(.eh_frame)) *(.eh_frame.*) }
   .gcc_except_table   : { *(.gcc_except_table .gcc_except_table.*) }
-  .gnu_extab   : { *(.gnu_extab*) }
 
   . = ALIGN(8);
 
@@ -54,13 +36,13 @@ SECTIONS
   .tdata :
   {
     __tdata_start = .;
-    *(.tdata .tdata.* .gnu.linkonce.td.*)
+    *(.tdata .tdata.*)
     . = ALIGN(8);
     __tdata_end = .;
   }
   .tbss :
   {
-    *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon)
+    *(.tbss .tbss.*)
     . = ALIGN(8);
     __tbss_end = .;
   }
@@ -73,14 +55,13 @@ SECTIONS
   .data :
   {
     __DATA_BEGIN__ = .;
-    *(.data .data.* .gnu.linkonce.d.*)
-    SORT(CONSTRUCTORS)
+    *(.data .data.*)
     /* We want the small data sections together, so single-instruction offsets
        can access them all, and initialized data all before uninitialized, so
        we can shorten the on-disk segment size.  */
     __SDATA_BEGIN__ = .;
     *(.srodata.cst16) *(.srodata.cst8) *(.srodata.cst4) *(.srodata.cst2) *(.srodata .srodata.*)
-    *(.sdata .sdata.* .gnu.linkonce.s.*)
+    *(.sdata .sdata.*)
   }
 
   /* Align the start */
@@ -88,12 +69,8 @@ SECTIONS
   __bss_start = .;
   .bss :
   {
-    *(.dynsbss)
-    *(.sbss .sbss.* .gnu.linkonce.sb.*)
-    *(.scommon)
-   *(.dynbss)
-   *(.bss .bss.* .gnu.linkonce.b.*)
-   *(COMMON)
+    *(.sbss .sbss.*)
+    *(.bss .bss.*)
   }
   . = ALIGN(64 / 8);
   __BSS_END__ = .;
