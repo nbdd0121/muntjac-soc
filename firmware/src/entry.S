@@ -96,34 +96,28 @@ _start:
     slli t0, s0, 14
     sub sp, sp, t0
 
-    la t0, __tdata_start
-    la t1, __tdata_end
-    la t2, __tbss_end
+    la s1, __tdata_start
+    la s2, __tdata_end
+    la s3, __tbss_end
 
     # Subtract the size needed for TLS (aligned to 16 bytes)
-    sub t3, t2, t0
-    sub tp, sp, t3
+    sub t0, s3, s1
+    sub tp, sp, t0
     and tp, tp, ~15
     mv  sp, tp
 
     # Copy TDATA
-    mv  t4, tp
-    bge t0, t1, 2f
-1:
-    ld a5, 0(t0)
-    sd a5, 0(t4)
-    addi t0, t0, 8
-    addi t4, t4, 8
-    blt t0, t1, 1b
-2:
+    mv  a0, tp
+    mv  a1, s1
+    sub a2, s2, a1
+    call memcpy
+
     # Clear TBSS
-    bge t0, t2, 4f
-3:
-    sd x0, 0(t4)
-    addi t0, t0, 8
-    addi t4, t4, 8
-    blt t0, t2, 3b
-4:
+    sub a0, s2, s1
+    add a0, a0, tp
+    li  a1, 0
+    sub a2, s3, s1
+    call memset
 
     la gp, __global_pointer$
 .option pop
