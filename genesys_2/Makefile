@@ -2,6 +2,11 @@ default: firmware
 
 .PHONY: default firmware project bitstream program-flash-firmware program-flash
 
+FORCE:
+
+../build/linker: FORCE
+	@$(MAKE) -C .. -q build/linker || $(MAKE) -C .. build/linker
+
 CARGO_OUT_DIR=$(realpath .)/target/riscv64imac-unknown-none-elf/release
 
 device_tree.dts:
@@ -10,7 +15,7 @@ device_tree.dts:
 # Files colleted by Cargo
 -include $(CARGO_OUT_DIR)/bootloader.d
 
-$(CARGO_OUT_DIR)/bootloader: device_tree.dts
+$(CARGO_OUT_DIR)/bootloader: ../build/linker device_tree.dts
 	cd ../firmware; CARGO_TARGET_DIR=$(abspath ./target) DTS=$(realpath device_tree.dts) cargo build --release
 	touch $@
 

@@ -1,6 +1,6 @@
 [build]
 target = "riscv64imac-unknown-none-elf"
-rustflags = ["-Clink-args=-Tlinker.ld --eh-frame-hdr", "-Cpanic=unwind", "-Zsymbol-mangling-version=v0"]
+rustflags = ["-Clink-args=-Tlinker.ld --eh-frame-hdr", "-Clinker-flavor=ld", "-Cpanic=unwind", "-Zsymbol-mangling-version=v0"]
 
 [unstable]
 build-std = ["core", "alloc"]
@@ -8,4 +8,4 @@ build-std = ["core", "alloc"]
 build-std-features = ["compiler-builtins-mangled-names"]
 
 [target.riscv64imac-unknown-none-elf]
-linker = "riscv64-unknown-linux-gnu-ld"
+linker = "../build/linker"

@@ -9,6 +9,8 @@ use std::process::Command;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var("OUT_DIR").unwrap();
 
+    println!("cargo:rerun-if-changed=../build/linker");
+
     // Read device tree source file.
     // Device tree is the canonical source of truth for all the info.
     let master_dts_file = env::var("DTS").unwrap();

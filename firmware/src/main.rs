@@ -150,6 +150,16 @@ fn load_kernel() -> alloc::vec::Vec<u8> {
     }
 }
 
+// Functions only reachable during initialization may still be called after
+// init if the function pointers are stored into global variables.
+//
+// To ensure these functions are not put into the init section, we make all
+// functions reachable from this function considered used after init.
+#[no_mangle]
+extern "C" fn main_hot() {
+    fmt::logger_init();
+}
+
 #[no_mangle]
 extern "C" fn main(boot: bool) -> usize {
     static DTB_PTR: AtomicUsize = AtomicUsize::new(0);
