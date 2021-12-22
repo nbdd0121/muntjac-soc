@@ -5,13 +5,6 @@ if {[info exists env(PART)]} {
     exit 1
 }
 
-if {[info exists env(CFGMEM_PART)]} {
-    set cfgmem_part $env(CFGMEM_PART)
-} else {
-    puts "ERROR: Flash memory part not specified"
-    exit 1
-}
-
 if {[info exists env(PROGRAM)]} {
     set program $env(PROGRAM)
 } else {
@@ -81,31 +74,17 @@ if { $hw_device_found == 0 } {
         Check cables and ensure that jumpers are correct for JTAG programming."
     exit 1
 }
-puts "INFO: Programming flash to device $hw_device on target $hw_target."
+puts "INFO: Programming bitstream to device $hw_device on target $hw_target."
 
 current_hw_device $hw_device
 set_property PARAM.FREQUENCY 15000000 [get_hw_targets $hw_target]
 
-create_hw_cfgmem -hw_device [current_hw_device] [lindex [get_cfgmem_parts $cfgmem_part] 0]
-set_property PROGRAM.ADDRESS_RANGE {use_file} [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-set_property PROGRAM.FILES [list $program] [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-set_property PROGRAM.PRM_FILE {} [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-set_property PROGRAM.UNUSED_PIN_TERMINATION {pull-none} [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-set_property PROGRAM.BLANK_CHECK 0 [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-set_property PROGRAM.ERASE 1 [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-set_property PROGRAM.CFG_PROGRAM 1 [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-set_property PROGRAM.VERIFY 1 [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-set_property PROGRAM.CHECKSUM 0 [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-startgroup
-create_hw_bitstream -hw_device [current_hw_device] [get_property PROGRAM.HW_CFGMEM_BITFILE [current_hw_device]]
+set_property PROGRAM.FILE [list $program] [current_hw_device]
 program_hw_devices [current_hw_device]
-refresh_hw_device [current_hw_device]
-program_hw_cfgmem -hw_cfgmem [get_property PROGRAM.HW_CFGMEM [current_hw_device]]
-endgroup
 
 # Disconnect from Xilinx Hardware Server
 close_hw_target
 disconnect_hw_server
 
 puts ""
-puts "INFO: SUCCESS! Flash has been programmed with firmware"
+puts "INFO: SUCCESS! FPGA has been programmed with bitstream $program"

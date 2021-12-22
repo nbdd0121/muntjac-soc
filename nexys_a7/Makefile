@@ -65,3 +65,6 @@ program-flash-firmware: firmware.mcs
 
 program-flash: bitstream.mcs
 	PART="xc7a100tcsg324-1" CFGMEM_PART="s25fl128sxxxxxx0-spi-x1_x2_x4" PROGRAM="$<" vivado -notrace -mode batch -source ../util/program_flash.tcl
+
+program-bitstream: bitstream.bit
+	PART="xc7a100tcsg324-1" PROGRAM="$<" vivado -notrace -mode batch -source ../util/program_bitstream.tcl
