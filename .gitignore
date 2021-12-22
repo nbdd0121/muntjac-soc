@@ -1,5 +1,6 @@
 /vmlinux*
 /rootfs.img
+/build
 /*/build
 /*/target
 /*/device_tree.dts

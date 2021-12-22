@@ -13,3 +13,15 @@ vmlinux.gz: vmlinux
 rootfs.img: data/debian_packages.txt
 	touch -a $@
 	util/create_rootfs.sh
+
+CARGO_OUT_DIR=$(realpath .)/build/release
+
+# Files colleted by Cargo
+-include $(CARGO_OUT_DIR)/linker.d
+
+$(CARGO_OUT_DIR)/linker:
+	cd tools/linker; CARGO_TARGET_DIR=$(abspath ./build) cargo build --release
+	touch $@
+
+build/linker: $(CARGO_OUT_DIR)/linker
+	cp $< $@
