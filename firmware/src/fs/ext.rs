@@ -551,7 +551,7 @@ impl FileSystem {
             let node = &nodes.nodes[extent_idx];
 
             let blk_within_extent = block - node.block;
-            if blk_within_extent >= node.len as u32 {
+            if blk_within_extent >= (node.len & !0x8000) as u32 {
                 return None;
             }
 
@@ -623,22 +623,33 @@ impl FileSystem {
 
             let (blk_idx, nr_blk) = if inode.flags & EXT4_EXTENTS_FL != 0 {
                 let mut cache = self.extent_cache.lock();
-                let node = self
-                    .get_extent_leaf(ino, &mut cache, &inode.blocks, blk)?
-                    .unwrap();
+                let node = self.get_extent_leaf(ino, &mut cache, &inode.blocks, blk)?;
 
-                let block = (node.start_hi as u64) << 32 | node.start_lo as u64;
-                let blk_within_extent = blk - node.block;
-                (
-                    block + blk_within_extent as u64,
-                    node.len as usize - blk_within_extent as usize,
-                )
+                match node {
+                    Some(node) => {
+                        let block = (node.start_hi as u64) << 32 | node.start_lo as u64;
+                        let blk_within_extent = blk - node.block;
+                        (
+                            // The MSB of the block is set if the extent is a hole
+                            if node.len & 0x8000 == 0 {
+                                Some(block + blk_within_extent as u64)
+                            } else {
+                                None
+                            },
+                            node.len as usize - blk_within_extent as usize,
+                        )
+                    }
+                    None => (None, 1),
+                }
             } else {
                 todo!("direct {}", blk);
             };
 
             let len = buf.len().min((nr_blk << shift) - blk_offset as usize);
-            self.read(&mut buf[..len], (blk_idx << shift) + blk_offset)?;
+            match blk_idx {
+                Some(blk_idx) => self.read(&mut buf[..len], (blk_idx << shift) + blk_offset)?,
+                None => buf[..len].fill(0),
+            }
             buf = &mut buf[len..];
             offset += len as u64;
         }
