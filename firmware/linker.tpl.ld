@@ -10,46 +10,35 @@ SECTIONS
   __executable_start = .;
   .text.start : { *(.text.start) }
 
-  .text           :
+  .text  :
   {
     *(.text.unlikely .text.unlikely.*)
     *(.text.startup .text.startup.*)
     *(.text .text.*)
   }
-  PROVIDE (__etext = .);
-  PROVIDE (_etext = .);
-  PROVIDE (etext = .);
-  .rodata         : { *(.rodata .rodata.*) }
-  .sdata2         :
-  {
-    *(.sdata2 .sdata2.*)
-  }
-  .sbss2          : { *(.sbss2 .sbss2.*) }
-  . = ALIGN(64 / 8);
-  .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
-  .eh_frame       : { KEEP (*(.eh_frame)) *(.eh_frame.*) }
-  .gcc_except_table   : { *(.gcc_except_table .gcc_except_table.*) }
 
-  . = ALIGN(8);
+  PROVIDE(__etext = .);
+
+  .rodata         : { *(.rodata .rodata.*) }
+  .sdata2         : { *(.sdata2 .sdata2.*) }
+  .sbss2          : { *(.sbss2  .sbss2.* ) }
 
   /* Thread Local Storage sections  */
   .tdata :
   {
     __tdata_start = .;
     *(.tdata .tdata.*)
-    . = ALIGN(8);
     __tdata_end = .;
   }
   .tbss :
   {
     *(.tbss .tbss.*)
-    . = ALIGN(8);
     __tbss_end = .;
   }
 
-  . = ALIGN(8);
-
-  __data_loc = .;
+  .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
+  .eh_frame       : { KEEP (*(.eh_frame)) *(.eh_frame.*) }
+  .gcc_except_table   : { *(.gcc_except_table .gcc_except_table.*) }
 
   /* DATA SECTIONS */
   .data :
@@ -74,9 +63,7 @@ SECTIONS
   }
   . = ALIGN(64 / 8);
   __BSS_END__ = .;
-    __global_pointer$ = MIN(__SDATA_BEGIN__ + 0x800,
-		            MAX(__DATA_BEGIN__ + 0x800, __BSS_END__ - 0x800));
-  _end = .; PROVIDE (end = .);
+  __global_pointer$ = MIN(__SDATA_BEGIN__ + 0x800, MAX(__DATA_BEGIN__ + 0x800, __BSS_END__ - 0x800));
 
   /* DWARF debug sections.
      Symbols in the DWARF debugging sections are relative to the beginning
