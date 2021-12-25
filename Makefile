@@ -1,4 +1,10 @@
+LD_VERSION := $(shell riscv64-unknown-linux-gnu-ld -v 2>/dev/null)
+
+ifdef LD_VERSION
 PREFIX = riscv64-unknown-linux-gnu-
+else
+PREFIX = riscv64-linux-gnu-
+endif
 
 linux/.config:
 	cp data/linux.config $@

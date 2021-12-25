@@ -93,7 +93,7 @@ pub struct TrapInfo {
 }
 
 fn load_kernel() -> alloc::vec::Vec<u8> {
-    if true {
+    if false {
         let time = timer::time();
         let mut vec = net::load_kernel();
         let elapsed = timer::time() - time;

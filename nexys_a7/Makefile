@@ -1,3 +1,11 @@
+LD_VERSION := $(shell riscv64-unknown-linux-gnu-ld -v 2>/dev/null)
+
+ifdef LD_VERSION
+PREFIX = riscv64-unknown-linux-gnu-
+else
+PREFIX = riscv64-linux-gnu-
+endif
+
 default: firmware
 
 .PHONY: default firmware project bitstream program-flash-firmware program-flash
@@ -23,7 +31,7 @@ firmware.elf: $(CARGO_OUT_DIR)/bootloader
 	cp $< $@
 
 firmware.bin: firmware.elf
-	riscv64-unknown-linux-gnu-objcopy $< $@ -O binary
+	$(PREFIX)objcopy $< $@ -O binary
 
 firmware.mcs: firmware.bin
 	vivado -notrace -mode batch -source util/generate_mcs.tcl -tclargs nobit

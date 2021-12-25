@@ -190,6 +190,12 @@ fn main() -> Result<()> {
         }
     }
 
+    // Probe the linker name.
+    let linker = match std::process::Command::new("riscv64-unknown-linux-gnu-ld").arg("-v").output() {
+        Ok(_) => "riscv64-unknown-linux-gnu-ld",
+        Err(_) => "riscv64-linux-gnu-ld",
+    };
+
     // Stage 1: First link everything in relocatable mode into a single object file to aid processing.
     //
     // To do this we need to filter out --gc-sections and -o options from the linker command line.
@@ -218,7 +224,7 @@ fn main() -> Result<()> {
     //
     // Use this approach instead of writing out ELF files outselves using `object`
     // for reduced complexity and improved robustness.
-    let status = std::process::Command::new("riscv64-unknown-linux-gnu-ld")
+    let status = std::process::Command::new(linker)
         .arg("-r")
         .arg("-Tlinker.ld.tmp")
         .arg("output.elf.tmp")
@@ -230,7 +236,7 @@ fn main() -> Result<()> {
     }
 
     // Stage 2: Complete linking.
-    let status = std::process::Command::new("riscv64-unknown-linux-gnu-ld")
+    let status = std::process::Command::new(linker)
         .arg("renamed.elf.tmp")
         .args(stage2_args)
         .status()?;
