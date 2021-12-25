@@ -4,24 +4,26 @@ ENTRY(_start)
 
 SECTIONS
 {
-  . = ${MEMORY_LIMIT} - 0x200000;
-
-  __text_start = .;
+  . = 0;
   __executable_start = .;
-  .text.start : { *(.text.start) }
 
-  .text  :
-  {
-    *(.text.unlikely .text.unlikely.*)
+  .text.startup : {
+    *(.text.start)
     *(.text.startup .text.startup.*)
-    *(.text .text.*)
+  }
+  .text.unlikely : {
+    *(.text.unlikely .text.unlikely.*)
+  }
+  .rodata.startup : {
+    *(.rodata.startup .rodata.startup.*)
+  }
+  .rodata.unlikely : {
+    *(.rodata.unlikely .rodata.unlikely.*)
   }
 
-  PROVIDE(__etext = .);
-
-  .rodata         : { *(.rodata .rodata.*) }
-  .sdata2         : { *(.sdata2 .sdata2.*) }
-  .sbss2          : { *(.sbss2  .sbss2.* ) }
+  .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
+  .eh_frame       : { KEEP (*(.eh_frame)) *(.eh_frame.*) }
+  .gcc_except_table   : { *(.gcc_except_table .gcc_except_table.*) }
 
   /* Thread Local Storage sections  */
   .tdata :
@@ -36,34 +38,48 @@ SECTIONS
     __tbss_end = .;
   }
 
-  .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
-  .eh_frame       : { KEEP (*(.eh_frame)) *(.eh_frame.*) }
-  .gcc_except_table   : { *(.gcc_except_table .gcc_except_table.*) }
+  __text_start_phys = .;
+  . = ${MEMORY_LIMIT} - 0x200000;
+  __text_start = .;
 
-  /* DATA SECTIONS */
-  .data :
+  /* Set LMA address here, and all following sections will get correct LMA */
+  .text : AT(__text_start_phys)
   {
+    *(.text .text.*)
+  }
+
+  PROVIDE(memcpy_phys = memcpy - __text_start + __text_start_phys);
+  PROVIDE(memset_phys = memset - __text_start + __text_start_phys);
+  PROVIDE(__etext = .);
+
+  .rodata : { *(.rodata .rodata.*) }
+  .sdata2 : { *(.sdata2 .sdata2.*) }
+  .sbss2 : { *(.sbss2  .sbss2.* ) }
+
+  . = ALIGN(8);
+  .data : {
     __DATA_BEGIN__ = .;
     *(.data .data.*)
-    /* We want the small data sections together, so single-instruction offsets
-       can access them all, and initialized data all before uninitialized, so
-       we can shorten the on-disk segment size.  */
+  }
+
+  /* We want the small data sections together, so single-instruction offsets
+      can access them all, and initialized data all before uninitialized, so
+      we can shorten the on-disk segment size.  */
+  . = ALIGN(8);
+  .sdata : {
     __SDATA_BEGIN__ = .;
     *(.srodata.cst16) *(.srodata.cst8) *(.srodata.cst4) *(.srodata.cst2) *(.srodata .srodata.*)
     *(.sdata .sdata.*)
   }
 
-  /* Align the start */
-  . = ALIGN(64 / 8);
   __bss_start = .;
-  .bss :
-  {
-    *(.sbss .sbss.*)
-    *(.bss .bss.*)
-  }
+  __bss_start_phys = __bss_start - __text_start + __text_start_phys;
+  .sbss : { *(.sbss .sbss.*) }
+  .bss : { *(.bss .bss.*) }
   . = ALIGN(64 / 8);
   __BSS_END__ = .;
   __global_pointer$ = MIN(__SDATA_BEGIN__ + 0x800, MAX(__DATA_BEGIN__ + 0x800, __BSS_END__ - 0x800));
+
 
   /* DWARF debug sections.
      Symbols in the DWARF debugging sections are relative to the beginning

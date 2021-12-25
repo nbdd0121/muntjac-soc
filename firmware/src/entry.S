@@ -42,35 +42,19 @@ _start:
     csrr s0, mhartid
     bnez s0, .secondary_start
 
-    # t0 = __text_start
-    # t1 = __bss_start
-    # t2 = __BSS_END__
-    lui t0, %hi(__text_start)
-    addi t0, t0, %lo(__text_start)
-    lui t1, %hi(__bss_start)
-    addi t1, t1, %lo(__bss_start)
-    lui t2, %hi(__BSS_END__)
-    addi t2, t2, %lo(__BSS_END__)
+    la  a0, __text_start
+    la  a1, __text_start_phys
+    la  a2, __bss_start_phys
+    sub a2, a2, a1
+    call memcpy_phys
 
-    # Relocate text and data (i.e. all memory between __text_start and __bss_start)
-    la t4, __text_start
-    # We are already relocated if t4 >= t0 as the ROM is located at a low address.
-    bge t4, t0, 2f
-1:
-    ld a5, 0(t4)
-    sd a5, 0(t0)
-    addi t4, t4, 8
-    addi t0, t0, 8
-    blt t0, t1, 1b
-2:
-    # Clear BSS
-    bge t1, t2, 4f
-3:
-    sd x0, 0(t1)
-    addi t1, t1, 8
-    blt t1, t2, 3b
-4:
-    j .relocate
+    la  a0, __bss_start
+    li  a1, 0
+    la  a2, __BSS_END__
+    sub a2, a2, a0
+    call memset_phys
+
+    j .relocated
 
 .secondary_start:
     csrwi mie, 1 << 3
@@ -81,15 +65,9 @@ _start:
     andi t0, t0, 1 << 3
     beqz t0, 1b
 
-    # Fallthrough to relocate
+    # Fallthrough to relocated
 
-.relocate:
-    # Text/data relocated, we can now jump to relocated address
-    lui t0, %hi(.relocated_start)
-    addi t0, t0, %lo(.relocated_start)
-    jr t0
-
-.relocated_start:
+.relocated:
     # Setup the firmware stack and thread pointer
     # The stack pointer will grow down and thread pointer will grow up
     li sp, MEMORY_LIMIT
@@ -158,8 +136,9 @@ _start:
     csrw mstatus, t0
     mret
 
+.section .text
 .extern handle_interrupt
-.balign 4, 1
+.balign 16, 1
 handler:
     # Setup stack MSCRATCH
     csrrw sp, mscratch, sp
