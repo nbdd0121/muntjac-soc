@@ -23,7 +23,7 @@ firmware.elf: $(CARGO_OUT_DIR)/bootloader
 	cp $< $@
 
 firmware.bin: firmware.elf
-	riscv64-unknown-elf-objcopy $< $@ -O binary
+	riscv64-unknown-linux-gnu-objcopy $< $@ -O binary
 
 firmware.mcs: firmware.bin
 	vivado -notrace -mode batch -source util/generate_mcs.tcl -tclargs nobit
