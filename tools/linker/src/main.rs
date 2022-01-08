@@ -170,7 +170,7 @@ fn main() -> Result<()> {
     let mut stage2_args = Vec::new();
     while let Some(arg) = args.next() {
         match &*arg {
-            "--gc-sections" | "--eh-frame-hdr" => {
+            "--eh-frame-hdr" => {
                 stage2_args.push(arg);
             }
             "-o" => {
@@ -198,11 +198,13 @@ fn main() -> Result<()> {
 
     // Stage 1: First link everything in relocatable mode into a single object file to aid processing.
     //
-    // To do this we need to filter out --gc-sections and -o options from the linker command line.
-    let status = std::process::Command::new("riscv64-unknown-linux-gnu-ld")
+    // To do this we need to filter out -o options from the linker command line.
+    let status = std::process::Command::new(linker)
         .arg("-r")
         .arg("-o")
         .arg("output.elf.tmp")
+        .arg("-e")
+        .arg("_start")
         .args(stage1_args)
         .status()?;
     if !status.success() {
