@@ -36,7 +36,7 @@ firmware.bin: firmware.elf
 firmware.mcs: firmware.bin
 	vivado -notrace -mode batch -source util/generate_mcs.tcl -tclargs nobit
 
-firmware: firmware.mcs
+firmware: firmware.elf
 
 PROJECT_DIR=build/garyguo.net_systems_muntjac_soc_0.1/genesys_2-vivado
 PROJECT_NAME=garyguo.net_systems_muntjac_soc_0.1
