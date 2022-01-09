@@ -34,7 +34,6 @@ Firmware and software compilatin needs the following tools:
 * Device tree compiler
 * Flex and Bison
 * GCC toolchain for cross-compilation
-  * Both Linux target and ELF target are required
 * Rustc and Cargo
 
 Device tree compiler, flex and bison should be available from your distribution. If you are using a Debian-based system,
@@ -45,10 +44,10 @@ sudo apt-get install dtc flex bison
 
 If you are using a Debian-based system, RISC-V cross compilers can also be fetched using apt-get:
 ```bash
-sudo apt-get install gcc-riscv64-linux-gnu gcc-riscv64-unknown-elf
+sudo apt-get install gcc-riscv64-linux-gnu
 ```
 If you want to build the cross compiler yourself, you can follow [this guide](https://wiki.osdev.org/GCC_Cross-Compiler)
-and compile for target riscv64-unknown-linux-gnu and riscv64-unknown-elf.
+and compile for target riscv64-unknown-linux-gnu.
 
 The Rust toolchain can obtained from [Rustup](https://rustup.rs/).
 ```bash

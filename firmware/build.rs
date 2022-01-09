@@ -186,6 +186,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::write("linker.ld", ld).unwrap();
 
     let mut cc = cc::Build::new();
+    println!("cargo:rerun-if-env-changed=CC");
+    println!("cargo:rerun-if-env-changed=CFLAGS");
     println!("cargo:rerun-if-changed=src/entry.S");
     cc.file("src/entry.S");
     println!("cargo:rerun-if-changed=src/memcpy.S");

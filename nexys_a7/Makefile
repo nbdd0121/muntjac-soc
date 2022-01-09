@@ -24,7 +24,7 @@ device_tree.dts:
 -include $(CARGO_OUT_DIR)/bootloader.d
 
 $(CARGO_OUT_DIR)/bootloader: ../build/linker device_tree.dts
-	cd ../firmware; CARGO_TARGET_DIR=$(abspath ./target) DTS=$(realpath device_tree.dts) cargo build --release
+	cd ../firmware; CC=$(PREFIX)gcc CFLAGS="-fno-pic" CARGO_TARGET_DIR=$(abspath ./target) DTS=$(realpath device_tree.dts) cargo build --release
 	touch $@
 
 firmware.elf: $(CARGO_OUT_DIR)/bootloader
