@@ -3,7 +3,7 @@
 	url = git@github.com:nbdd0121/sdhci.git
 [submodule "muntjac"]
 	path = muntjac
-	url = git@github.com:nbdd0121/muntjac.git
+	url = git@github.com:lowrisc/muntjac.git
 [submodule "linux"]
 	path = linux
 	url = git@github.com:nbdd0121/linux.git
