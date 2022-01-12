@@ -15,7 +15,7 @@ FORCE:
 ../build/linker: FORCE
 	@$(MAKE) -C .. -q build/linker || $(MAKE) -C .. build/linker
 
-CARGO_OUT_DIR=$(realpath .)/target/riscv64imac-unknown-none-elf/release
+CARGO_OUT_DIR=$(realpath .)/build/riscv64imac-unknown-none-elf/release
 
 device_tree.dts:
 	cp data/device_tree.dts .
@@ -24,7 +24,7 @@ device_tree.dts:
 -include $(CARGO_OUT_DIR)/bootloader.d
 
 $(CARGO_OUT_DIR)/bootloader: ../build/linker device_tree.dts
-	cd ../firmware; CC=$(PREFIX)gcc CFLAGS="-fno-pic" CARGO_TARGET_DIR=$(abspath ./target) DTS=$(realpath device_tree.dts) cargo build --release
+	cd ../firmware; CC=$(PREFIX)gcc CFLAGS="-fno-pic" CARGO_TARGET_DIR=$(abspath ./build) DTS=$(realpath device_tree.dts) cargo build --release
 	touch $@
 
 firmware.elf: $(CARGO_OUT_DIR)/bootloader
@@ -45,6 +45,9 @@ PROJECT=$(PROJECT_DIR)/$(PROJECT_NAME).xpr
 # Files collected by FuseSoC
 fusesoc-deps=
 -include $(PROJECT_DIR)/core-deps.mk
+
+# If any file is missing then force a rebuild.
+fusesoc-deps:=$(foreach f,$(fusesoc-deps),$(if $(wildcard $f),$f,FORCE))
 
 # Vivado can handle changed SystemVerilog files, so filter them out
 # TODO: How about generated files
@@ -76,3 +79,6 @@ program-flash: bitstream.mcs
 
 program-bitstream: bitstream.bit
 	PART="xc7k325tffg900-2" PROGRAM="$<" vivado -notrace -mode batch -source ../util/program_bitstream.tcl
+
+clean:
+	rm -rf build
