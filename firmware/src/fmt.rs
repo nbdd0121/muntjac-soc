@@ -23,8 +23,7 @@ pub fn console_write(args: core::fmt::Arguments<'_>) {
 }
 
 macro_rules! format_args_nl {
-    ($fmt:expr) => (format_args!(concat!($fmt, "\n")));
-    ($fmt:expr, $($args:tt)* ) => (format_args!(concat!($fmt, "\n"), $($args)*));
+    ($($args:tt)*) => (format_args!("{}\n", format_args!($($args)*)))
 }
 
 macro_rules! println {
@@ -79,7 +78,6 @@ impl log::Log for Logger {
             };
             println!(
                 "\x1b[{color}m{level}:{target}:{msg}\x1b[0m",
-                color = color,
                 level = record.level(),
                 target = record.target(),
                 msg = record.args()
