@@ -2,7 +2,9 @@
 
 use crate::io::Result as IoResult;
 use crate::iomem::IoMem;
+use crate::timer::{sleep, Timer};
 use byteorder::{ByteOrder, LE};
+use core::time::Duration;
 use spin::Mutex;
 
 const BLK_SIZE: usize = 0x04;
@@ -39,6 +41,41 @@ impl Inner {
         }
     }
 
+    fn set_clock(&mut self, clock: u32) {
+        // Turn off SD clock
+        let state = self.base.read_u16(CLOCK_CTRL);
+        self.base.write_u16(CLOCK_CTRL, state & !0b100);
+
+        // Read base clock, must not be zero
+        let cap = self.base.read_u32(CAPABILITIES);
+        let base_clock = (cap >> 8) & 0b111111;
+        assert_ne!(base_clock, 0);
+
+        // Calculate the divisor. This needs to round up.
+        let divisor = (base_clock * 1000 + clock - 1) / clock;
+
+        assert!(divisor <= 512);
+        // If divisor == 1, use the base clock, otherwise do 2x division.
+        let freq_select = if divisor == 1 {
+            0
+        } else {
+            (divisor as u16 + 1) / 2
+        };
+
+        self.base.write_u16(CLOCK_CTRL, freq_select << 8 | 0b001);
+        // Wait for internal clock to stabilise
+        loop {
+            let state = self.base.read_u16(CLOCK_CTRL);
+            if state & 0b10 != 0 {
+                break;
+            }
+        }
+
+        // Turn on SD clock
+        self.base.write_u16(CLOCK_CTRL, freq_select << 8 | 0b101);
+        println!("SD clock set to {}kHz", clock);
+    }
+
     pub fn power_on(&mut self) {
         assert!(!self.init);
         println!("Init SD Card");
@@ -65,34 +102,10 @@ impl Inner {
         }
         println!("SD Card present");
 
+        // Identification clock should be no more than 400 kHz.
+        self.set_clock(400);
+
         let cap = self.base.read_u32(CAPABILITIES);
-
-        // Read base clock, must not be zero
-        let base_clock = (cap >> 8) & 0b111111;
-        assert_ne!(base_clock, 0);
-
-        // Calculate the divisor to get <= 25MHz.
-        let divisor = (base_clock + 24) / 25;
-        assert!(divisor <= 512);
-        // If divisor == 1, use the base clock, otherwise do 2x division.
-        let freq_select = if divisor == 1 {
-            0
-        } else {
-            (divisor as u16 + 1) / 2
-        };
-
-        // Turn on internal clock
-        self.base.write_u16(CLOCK_CTRL, freq_select << 8 | 0b001);
-        // Wait for internal clock to stabilise
-        loop {
-            let state = self.base.read_u16(CLOCK_CTRL);
-            if state & 0b10 != 0 {
-                break;
-            }
-        }
-        // Turn on SD clock
-        self.base.write_u16(CLOCK_CTRL, freq_select << 8 | 0b101);
-        println!("SD clock enabled");
 
         // Read base clock for timeout (in kHZ)
         let base_clock = (cap & 0b111111) * if (cap >> 7) & 1 == 0 { 1 } else { 1000 };
@@ -108,6 +121,8 @@ impl Inner {
 
         // Turn on SD power with voltage = 3.3V
         self.base.write_u8(POWER_CTRL, 0b1111);
+        // Some time for power to ramp up.
+        sleep(Duration::from_micros(200));
         println!("SD power on");
 
         // Reset card
@@ -121,15 +136,22 @@ impl Inner {
         println!("voltage check completed");
 
         // ACMD41
+        let timer = Timer::new(Duration::from_secs(1));
         let resp = loop {
             let state = self.wait_app_cmd(41, 0x40300000).expect("ACMD41 failed");
             if state & 0x80000000 != 0 {
                 break state;
             }
+            if timer.fired() {
+                panic!("ACMD41 timed out");
+            }
         };
         assert!(resp & 0x00300000 != 0);
         self.ccs = resp & 0x40000000 != 0;
         println!("{} detected", if self.ccs { "SDHC/SDXC" } else { "SDSC" });
+
+        // Identification complete, ramp up clock to 25MHz.
+        self.set_clock(25000);
 
         // CMD2
         self.wait_cmd(2, 0).expect("CMD2 failed");
