@@ -24,6 +24,7 @@ Hardware synthesis and implementation needs the following extra tools:
 * [Mako](https://github.com/sqlalchemy/mako)
 
 Vivado needs to be obtained from [Xilinx](https://www.xilinx.com/support/download.html). A license may be needed depending on your FPGA. Please refer to Xilinx documentation for more information. Please ensure that `vivado` is in your PATH.
+Please use a Vivado version that is at least v2020.2.
 
 FuseSoc, Edalize and Mako can be installed with PIP. Change the working directory to the root of the project, and run:
 ```bash
@@ -39,7 +40,7 @@ Firmware and software compilatin needs the following tools:
 Device tree compiler, flex and bison should be available from your distribution. If you are using a Debian-based system,
 you can install them with the following command:
 ```bash
-sudo apt-get install dtc flex bison
+sudo apt-get install device-tree-compiler flex bison
 ```
 
 If you are using a Debian-based system, RISC-V cross compilers can also be fetched using apt-get:
