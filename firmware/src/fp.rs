@@ -22,6 +22,8 @@ impl FpMode {
         unsafe {
             let mode: u8;
             asm!(
+                ".option push",
+                ".attribute arch, \"rv64gc\"",
                 // Enable float point registers
                 "li {tmp}, 0x6000",
                 "csrs mstatus, {tmp}",
@@ -32,15 +34,16 @@ impl FpMode {
                 "csrw mtvec, {tmp2}",
                 // Load dummy value to f0. If this fails, then we are in RV64FNone mode
                 "li {out}, 0",
-                ".short 0x2002", // fld f0, (sp)
+                "fld f0, (sp)",
                 // Test an fp operation. If this fails, then we are in RV64FMem mode.
                 "li {out}, 1",
-                ".int 0x02007053", // fadd.d f0, f0, f0
+                "fadd.d f0, f0, f0",
                 // If all succeeded, then we are in RV64FFull mode.
                 "li {out}, 2",
                 // Interrupt handler must be aligned
                 ".balign 4, 1",
                 "1: csrw mtvec, {tmp}",
+                ".option pop",
                 tmp = out(reg) _,
                 tmp2 = out(reg) _,
                 out = lateout(reg) mode,
@@ -153,78 +156,103 @@ impl FpState for FpStateMem {
 
     unsafe fn read_fpr(&self, idx: usize) -> u64 {
         let mut out = 0u64;
+        macro_rules! r {
+            ($reg:tt) => {
+                asm!(
+                    ".option push",
+                    ".attribute arch, \"rv64gc\"",
+                    concat!("fsd f", $reg, ", ({})"),
+                    ".option pop",
+                    in(reg) &mut out,
+                    options(nostack)
+                )
+            }
+        }
         match idx {
-            0 => asm!(".int 0x0002b027", in("t0") &mut out, options(nostack)),
-            1 => asm!(".int 0x0012b027", in("t0") &mut out, options(nostack)),
-            2 => asm!(".int 0x0022b027", in("t0") &mut out, options(nostack)),
-            3 => asm!(".int 0x0032b027", in("t0") &mut out, options(nostack)),
-            4 => asm!(".int 0x0042b027", in("t0") &mut out, options(nostack)),
-            5 => asm!(".int 0x0052b027", in("t0") &mut out, options(nostack)),
-            6 => asm!(".int 0x0062b027", in("t0") &mut out, options(nostack)),
-            7 => asm!(".int 0x0072b027", in("t0") &mut out, options(nostack)),
-            8 => asm!(".int 0x0082b027", in("t0") &mut out, options(nostack)),
-            9 => asm!(".int 0x0092b027", in("t0") &mut out, options(nostack)),
-            10 => asm!(".int 0x00a2b027", in("t0") &mut out, options(nostack)),
-            11 => asm!(".int 0x00b2b027", in("t0") &mut out, options(nostack)),
-            12 => asm!(".int 0x00c2b027", in("t0") &mut out, options(nostack)),
-            13 => asm!(".int 0x00d2b027", in("t0") &mut out, options(nostack)),
-            14 => asm!(".int 0x00e2b027", in("t0") &mut out, options(nostack)),
-            15 => asm!(".int 0x00f2b027", in("t0") &mut out, options(nostack)),
-            16 => asm!(".int 0x0102b027", in("t0") &mut out, options(nostack)),
-            17 => asm!(".int 0x0112b027", in("t0") &mut out, options(nostack)),
-            18 => asm!(".int 0x0122b027", in("t0") &mut out, options(nostack)),
-            19 => asm!(".int 0x0132b027", in("t0") &mut out, options(nostack)),
-            20 => asm!(".int 0x0142b027", in("t0") &mut out, options(nostack)),
-            21 => asm!(".int 0x0152b027", in("t0") &mut out, options(nostack)),
-            22 => asm!(".int 0x0162b027", in("t0") &mut out, options(nostack)),
-            23 => asm!(".int 0x0172b027", in("t0") &mut out, options(nostack)),
-            24 => asm!(".int 0x0182b027", in("t0") &mut out, options(nostack)),
-            25 => asm!(".int 0x0192b027", in("t0") &mut out, options(nostack)),
-            26 => asm!(".int 0x01a2b027", in("t0") &mut out, options(nostack)),
-            27 => asm!(".int 0x01b2b027", in("t0") &mut out, options(nostack)),
-            28 => asm!(".int 0x01c2b027", in("t0") &mut out, options(nostack)),
-            29 => asm!(".int 0x01d2b027", in("t0") &mut out, options(nostack)),
-            30 => asm!(".int 0x01e2b027", in("t0") &mut out, options(nostack)),
-            31 => asm!(".int 0x01f2b027", in("t0") &mut out, options(nostack)),
+            0 => r!(0),
+            1 => r!(1),
+            2 => r!(2),
+            3 => r!(3),
+            4 => r!(4),
+            5 => r!(5),
+            6 => r!(6),
+            7 => r!(7),
+            8 => r!(8),
+            9 => r!(9),
+            10 => r!(10),
+            11 => r!(11),
+            12 => r!(12),
+            13 => r!(13),
+            14 => r!(14),
+            15 => r!(15),
+            16 => r!(16),
+            17 => r!(17),
+            18 => r!(18),
+            19 => r!(19),
+            20 => r!(20),
+            21 => r!(21),
+            22 => r!(22),
+            23 => r!(23),
+            24 => r!(24),
+            25 => r!(25),
+            26 => r!(26),
+            27 => r!(27),
+            28 => r!(28),
+            29 => r!(29),
+            30 => r!(30),
+            31 => r!(31),
             _ => core::hint::unreachable_unchecked(),
         }
         out
     }
 
     unsafe fn write_fpr(&mut self, idx: usize, value: u64) {
+        macro_rules! w {
+            ($reg:tt) => {
+                asm!(
+                    ".option push",
+                    ".attribute arch, \"rv64gc\"",
+                    concat!("fld f", $reg, ", ({})"),
+                    ".option pop",
+                    in(reg) &value,
+                    options(nostack)
+                )
+            }
+        }
+
         match idx {
-            0 => asm!(".int 0x0002b007", in("t0") &value, options(nostack)),
-            1 => asm!(".int 0x0002b087", in("t0") &value, options(nostack)),
-            2 => asm!(".int 0x0002b107", in("t0") &value, options(nostack)),
-            3 => asm!(".int 0x0002b187", in("t0") &value, options(nostack)),
-            4 => asm!(".int 0x0002b207", in("t0") &value, options(nostack)),
-            5 => asm!(".int 0x0002b287", in("t0") &value, options(nostack)),
-            6 => asm!(".int 0x0002b307", in("t0") &value, options(nostack)),
-            7 => asm!(".int 0x0002b387", in("t0") &value, options(nostack)),
-            8 => asm!(".int 0x0002b407", in("t0") &value, options(nostack)),
-            9 => asm!(".int 0x0002b487", in("t0") &value, options(nostack)),
-            10 => asm!(".int 0x0002b507", in("t0") &value, options(nostack)),
-            11 => asm!(".int 0x0002b587", in("t0") &value, options(nostack)),
-            12 => asm!(".int 0x0002b607", in("t0") &value, options(nostack)),
-            13 => asm!(".int 0x0002b687", in("t0") &value, options(nostack)),
-            14 => asm!(".int 0x0002b707", in("t0") &value, options(nostack)),
-            15 => asm!(".int 0x0002b787", in("t0") &value, options(nostack)),
-            16 => asm!(".int 0x0002b807", in("t0") &value, options(nostack)),
-            17 => asm!(".int 0x0002b887", in("t0") &value, options(nostack)),
-            18 => asm!(".int 0x0002b907", in("t0") &value, options(nostack)),
-            19 => asm!(".int 0x0002b987", in("t0") &value, options(nostack)),
-            20 => asm!(".int 0x0002ba07", in("t0") &value, options(nostack)),
-            21 => asm!(".int 0x0002ba87", in("t0") &value, options(nostack)),
-            22 => asm!(".int 0x0002bb07", in("t0") &value, options(nostack)),
-            23 => asm!(".int 0x0002bb87", in("t0") &value, options(nostack)),
-            24 => asm!(".int 0x0002bc07", in("t0") &value, options(nostack)),
-            25 => asm!(".int 0x0002bc87", in("t0") &value, options(nostack)),
-            26 => asm!(".int 0x0002bd07", in("t0") &value, options(nostack)),
-            27 => asm!(".int 0x0002bd87", in("t0") &value, options(nostack)),
-            28 => asm!(".int 0x0002be07", in("t0") &value, options(nostack)),
-            29 => asm!(".int 0x0002be87", in("t0") &value, options(nostack)),
-            30 => asm!(".int 0x0002bf07", in("t0") &value, options(nostack)),
-            31 => asm!(".int 0x0002bf87", in("t0") &value, options(nostack)),
+            0 => w!(0),
+            1 => w!(1),
+            2 => w!(2),
+            3 => w!(3),
+            4 => w!(4),
+            5 => w!(5),
+            6 => w!(6),
+            7 => w!(7),
+            8 => w!(8),
+            9 => w!(9),
+            10 => w!(10),
+            11 => w!(11),
+            12 => w!(12),
+            13 => w!(13),
+            14 => w!(14),
+            15 => w!(15),
+            16 => w!(16),
+            17 => w!(17),
+            18 => w!(18),
+            19 => w!(19),
+            20 => w!(20),
+            21 => w!(21),
+            22 => w!(22),
+            23 => w!(23),
+            24 => w!(24),
+            25 => w!(25),
+            26 => w!(26),
+            27 => w!(27),
+            28 => w!(28),
+            29 => w!(29),
+            30 => w!(30),
+            31 => w!(31),
             _ => core::hint::unreachable_unchecked(),
         }
     }
