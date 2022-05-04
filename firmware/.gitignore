@@ -1,4 +1,3 @@
 /target
 /device_tree.dts
 /linker.ld
-/Cargo.lock
