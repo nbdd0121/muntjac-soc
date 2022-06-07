@@ -7,7 +7,7 @@
     #size-cells = <0x2>;
 
     chosen {
-        bootargs = "console=ttyS0,230400 ro root=/dev/mmcblk0 init=/bin/bash rcupdate.rcu_cpu_stall_suppress=1 rootwait";
+        bootargs = "console=ttyS0,230400 ro root=/dev/mmcblk0 rootflags=noload init=/bin/bash rcupdate.rcu_cpu_stall_suppress=1 rootwait";
     };
 
     cpus {
