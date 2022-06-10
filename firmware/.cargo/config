@@ -4,8 +4,6 @@ rustflags = ["-Clink-args=-Tlinker.ld --eh-frame-hdr", "-Clinker-flavor=ld", "-C
 
 [unstable]
 build-std = ["core", "alloc"]
-# Ensure the local build of compiler-builtins is used
-build-std-features = ["compiler-builtins-mangled-names"]
 
 [target.riscv64imac-unknown-none-elf]
 linker = "../build/linker"

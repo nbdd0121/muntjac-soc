@@ -7,7 +7,6 @@
 extern crate alloc;
 #[macro_use]
 extern crate log;
-extern crate compiler_builtins_local;
 extern crate unwinding;
 
 #[allow(dead_code)]
