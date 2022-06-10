@@ -17,11 +17,7 @@ softfp = { version = "0.1.0", default-features = false }
 riscv = { git = "https://github.com/nbdd0121/r2vm.git" }
 spin = "0.9"
 log = { version = "0.4", default-features = false }
-smoltcp = { version = "0.7", default-features = false, features = ["alloc", "ethernet", "socket-tcp", "socket-udp", "proto-ipv4", "proto-ipv6", "async"] }
 unwinding = { version = "0.1.4", default-features = false, features = ["unwinder", "personality", "fde-gnu-eh-frame-hdr", "panicking"] }
-miniz_oxide = "0.5"
-crc32fast = { version = "1.2", default-features = false }
-bitflags = "1"
 
 [patch.crates-io]
 
