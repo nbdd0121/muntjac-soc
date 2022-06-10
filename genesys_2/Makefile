@@ -21,14 +21,12 @@ device_tree.dts:
 	cp data/device_tree.dts .
 
 # Files colleted by Cargo
--include $(CARGO_OUT_DIR)/bootloader.d
+-include build/firmware.d
 
-$(CARGO_OUT_DIR)/bootloader: ../build/linker device_tree.dts
+firmware.elf: ../build/linker device_tree.dts
 	cd ../firmware; CC=$(PREFIX)gcc CFLAGS="-fno-pic" CARGO_TARGET_DIR=$(abspath ./build) DTS=$(realpath device_tree.dts) cargo build --release
-	touch $@
-
-firmware.elf: $(CARGO_OUT_DIR)/bootloader
-	cp $< $@
+	awk '{split($$0,a,": ");print "firmware.elf:"a[2];n=split(a[2],b," ");for(i=0;++i<=n;)print b[i]":"}' $(CARGO_OUT_DIR)/bootloader.d > build/firmware.d
+	cp $(CARGO_OUT_DIR)/bootloader $@
 
 firmware.bin: firmware.elf
 	$(PREFIX)objcopy $< $@ -O binary
