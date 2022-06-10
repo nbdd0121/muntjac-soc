@@ -60,7 +60,7 @@ fi
 
 echo "I: Reserving space for the rootfs image"
 # Allocate 2GiB
-fallocate -l 2G rootfs.img
+fallocate -l 2G rootfs.img || truncate -s 2G rootfs.img
 
 # Format the image with ext4
 echo "I: Formatting rootfs image with ext4"
