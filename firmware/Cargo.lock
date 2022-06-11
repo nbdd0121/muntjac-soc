@@ -34,6 +34,7 @@ name = "bootloader"
 version = "0.1.0"
 dependencies = [
  "arrayvec",
+ "buddy",
  "byteorder",
  "cc",
  "fdt",
@@ -41,9 +42,18 @@ dependencies = [
  "rand",
  "regex",
  "riscv",
+ "ro_cell",
  "softfp",
  "spin",
  "unwinding",
+]
+
+[[package]]
+name = "buddy"
+version = "0.1.0"
+source = "git+https://github.com/nbdd0121/buddy.git#1997bf8c2741c6050058d5dedad307d6e6172289"
+dependencies = [
+ "spin",
 ]
 
 [[package]]
@@ -175,6 +185,12 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 name = "riscv"
 version = "0.1.0"
 source = "git+https://github.com/nbdd0121/r2vm.git#7bbeb7d3407e72d09caf9a8095af823a3fb0cf94"
+
+[[package]]
+name = "ro_cell"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6323c540678532fa1026d4f5ca2a8ee71e679ff1d55fae5bdce8d9b2945bac2"
 
 [[package]]
 name = "scopeguard"

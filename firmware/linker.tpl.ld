@@ -80,6 +80,7 @@ SECTIONS
   __BSS_END__ = .;
   __global_pointer$ = MIN(__SDATA_BEGIN__ + 0x800, MAX(__DATA_BEGIN__ + 0x800, __BSS_END__ - 0x800));
 
+  _end = .;
 
   /* DWARF debug sections.
      Symbols in the DWARF debugging sections are relative to the beginning

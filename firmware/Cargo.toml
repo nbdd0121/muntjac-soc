@@ -15,6 +15,8 @@ byteorder = { version = "1", default-features = false }
 arrayvec = { version = "0.5", default-features = false }
 softfp = { version = "0.1.0", default-features = false }
 riscv = { git = "https://github.com/nbdd0121/r2vm.git" }
+buddy = { git = "https://github.com/nbdd0121/buddy.git" }
+ro_cell = "0.1"
 spin = "0.9"
 log = { version = "0.4", default-features = false }
 unwinding = { version = "0.1.4", default-features = false, features = ["unwinder", "personality", "fde-gnu-eh-frame-hdr", "panicking"] }

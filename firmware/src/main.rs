@@ -164,6 +164,7 @@ extern "C" fn main(boot: bool) -> usize {
 
         // Probe number of harts available
         ipi::probe_hart_count();
+        allocator::init();
 
         let kernel_memory_size = address::MEMORY_SIZE - 0x200000;
 
