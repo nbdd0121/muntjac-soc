@@ -50,6 +50,7 @@ module chip_top import prim_util_pkg::*; (
 
   // Whether Ethernet controller should be enabled.
   localparam EnableEth = 1'b1;
+
   localparam AddrWidth = 38;
   localparam DmaSourceWidth = 3;
   localparam HostSourceWidth = 2;
@@ -510,77 +511,91 @@ module chip_top import prim_util_pkg::*; (
   //////////////////////
   // #region Ethernet //
 
-  `TL_DECLARE(32, 19, DeviceSourceWidth, 1, eth_io);
-  `TL_DECLARE(64, 32, 2, SinkWidth, eth_dma);
-
   logic eth_irq;
   logic dma_tx_irq;
   logic dma_rx_irq;
   logic phy_irq;
 
-  eth #(
-    .IoDataWidth (32),
-    .IoAddrWidth (19),
-    .IoSourceWidth (DeviceSourceWidth),
-    .DmaSourceWidth (2),
-    .DmaSinkWidth (SinkWidth)
-  ) eth (
-    .clk_i (clk),
-    .rst_ni (rstn),
-    .io_clk_i (io_clk),
-    .mdc,
-    .mdio,
-    .rgmii_rd,
-    .rgmii_rx_ctl,
-    .rgmii_rxc,
-    .rgmii_td,
-    .rgmii_tx_ctl,
-    .rgmii_txc,
-    .phy_rst_n,
-    .phy_irq (phy_irq_i),
-    `TL_CONNECT_DEVICE_PORT(io, eth_io),
-    `TL_CONNECT_HOST_PORT(dma, eth_dma),
-    .eth_irq_o (eth_irq),
-    .dma_tx_irq_o (dma_tx_irq),
-    .dma_rx_irq_o (dma_rx_irq),
-    .phy_irq_o (phy_irq)
-  );
+  if (EnableEth) begin: eth
 
-  tl_adapter #(
-    .HostDataWidth (64),
-    .DeviceDataWidth (32),
-    .HostAddrWidth (AddrWidth),
-    .DeviceAddrWidth (19),
-    .HostSourceWidth (DeviceSourceWidth),
-    .DeviceSourceWidth (DeviceSourceWidth),
-    .HostSinkWidth (1),
-    .DeviceSinkWidth (1),
-    .HostMaxSize (3),
-    .DeviceMaxSize (2),
-    .HostFifo (1'b0),
-    .DeviceFifo (1'b0)
-  ) eth_io_adapter (
-    .clk_i (clk),
-    .rst_ni (rstn),
-    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [EthIoIdx]),
-    `TL_CONNECT_HOST_PORT(device, eth_io)
-  );
+    `TL_DECLARE(32, 19, DeviceSourceWidth, 1, eth_io);
+    `TL_DECLARE(64, 32, 2, SinkWidth, eth_dma);
 
-  tl_adapter #(
-    .HostDataWidth (64),
-    .DeviceDataWidth (128),
-    .HostAddrWidth (32),
-    .DeviceAddrWidth (AddrWidth),
-    .HostSourceWidth (2),
-    .DeviceSourceWidth (2),
-    .HostSinkWidth (SinkWidth),
-    .DeviceSinkWidth (SinkWidth)
-  ) eth_dma_adapter (
-    .clk_i (clk),
-    .rst_ni (rstn),
-    `TL_CONNECT_DEVICE_PORT(host, eth_dma),
-    `TL_CONNECT_HOST_PORT(device, dma_eth)
-  );
+    eth #(
+      .IoDataWidth (32),
+      .IoAddrWidth (19),
+      .IoSourceWidth (DeviceSourceWidth),
+      .DmaSourceWidth (2),
+      .DmaSinkWidth (SinkWidth)
+    ) eth (
+      .clk_i (clk),
+      .rst_ni (rstn),
+      .io_clk_i (io_clk),
+      .mdc,
+      .mdio,
+      .rgmii_rd,
+      .rgmii_rx_ctl,
+      .rgmii_rxc,
+      .rgmii_td,
+      .rgmii_tx_ctl,
+      .rgmii_txc,
+      .phy_rst_n,
+      .phy_irq (phy_irq_i),
+      `TL_CONNECT_DEVICE_PORT(io, eth_io),
+      `TL_CONNECT_HOST_PORT(dma, eth_dma),
+      .eth_irq_o (eth_irq),
+      .dma_tx_irq_o (dma_tx_irq),
+      .dma_rx_irq_o (dma_rx_irq),
+      .phy_irq_o (phy_irq)
+    );
+
+    tl_adapter #(
+      .HostDataWidth (64),
+      .DeviceDataWidth (32),
+      .HostAddrWidth (AddrWidth),
+      .DeviceAddrWidth (19),
+      .HostSourceWidth (DeviceSourceWidth),
+      .DeviceSourceWidth (DeviceSourceWidth),
+      .HostSinkWidth (1),
+      .DeviceSinkWidth (1),
+      .HostMaxSize (3),
+      .DeviceMaxSize (2),
+      .HostFifo (1'b0),
+      .DeviceFifo (1'b0)
+    ) eth_io_adapter (
+      .clk_i (clk),
+      .rst_ni (rstn),
+      `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [EthIoIdx]),
+      `TL_CONNECT_HOST_PORT(device, eth_io)
+    );
+
+    tl_adapter #(
+      .HostDataWidth (64),
+      .DeviceDataWidth (128),
+      .HostAddrWidth (32),
+      .DeviceAddrWidth (AddrWidth),
+      .HostSourceWidth (2),
+      .DeviceSourceWidth (2),
+      .HostSinkWidth (SinkWidth),
+      .DeviceSinkWidth (SinkWidth)
+    ) eth_dma_adapter (
+      .clk_i (clk),
+      .rst_ni (rstn),
+      `TL_CONNECT_DEVICE_PORT(host, eth_dma),
+      `TL_CONNECT_HOST_PORT(device, dma_eth)
+    );
+
+  end else begin: dummy_eth
+
+    assign mdc = 1'bz;
+    assign mdio = 1'bz;
+    assign rgmii_td = 4'bzzzz;
+    assign rgmii_tx_ctl = 1'bz;
+    assign rgmii_txc = 1'bz;
+    assign phy_rst_n = 1'bz;
+
+  end
+
 
   // #endregion
   //////////////////////
@@ -601,11 +616,13 @@ module chip_top import prim_util_pkg::*; (
     edge_trigger[1] = 1'b0;
 
     // Ethernet IRQs are all level-triggered
-    interrupts[3] = eth_irq;
-    interrupts[4] = dma_tx_irq;
-    interrupts[5] = dma_rx_irq;
-    interrupts[6] = phy_irq;
-    edge_trigger[6:3] = 4'b0;
+    if (EnableEth) begin
+      interrupts[3] = eth_irq;
+      interrupts[4] = dma_tx_irq;
+      interrupts[5] = dma_rx_irq;
+      interrupts[6] = phy_irq;
+      edge_trigger[6:3] = 4'b0;
+    end
   end
 
   // endregion
