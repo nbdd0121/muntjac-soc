@@ -6,14 +6,14 @@ For a detailed walkthough about how to build/use this project, please check the 
 
 ## Components
 
-The SoC contains (out of the box) the following components by default:
+The SoC contains the following components out of the box:
 * 2 Muntjac cores
 * Interrupt controller and timer (PLIC and CLINT)
 * Flash memory controller[^1] (work in XIP mode)
 * DDR memory controller[^1]
 * UART 16550[^1]
 * SD card controller
-* Ethernet controller[^2]
+* *(optional)* Ethernet controller[^2]
 
 [^1]: Xilinx IP that comes with Vivado, but not open source
 [^2]: Xilinx IP, not open source, separate license required

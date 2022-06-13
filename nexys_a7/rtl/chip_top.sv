@@ -49,7 +49,7 @@ module chip_top import prim_util_pkg::*; (
   localparam TimerClkFreq = 50;
 
   // Whether Ethernet controller should be enabled.
-  localparam EnableEth = 1'b1;
+  localparam EnableEth = 1'b0;
 
   localparam AddrWidth = 38;
   localparam DmaSourceWidth = 3;
