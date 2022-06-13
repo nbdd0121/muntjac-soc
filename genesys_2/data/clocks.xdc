@@ -16,7 +16,7 @@ set_max_delay -from [get_clocks mig_clk] -to [get_clocks bus_clk] -datapath_only
 # region SD Timing #
 
 # From SD base clock to the generated SDCLK
-create_generated_clock -name sdclk -source [get_pins sdhci/sdhci/clock_div/io_clk_o] -divide_by 2 [get_pins sdhci/sdhci/clock_div/sdclk_o_reg/Q]
+create_generated_clock -name sdclk -source [get_pins sdhci/sdhci/clock_div/io_clk_i] -divide_by 2 [get_pins sdhci/sdhci/clock_div/sdclk_o_reg/Q]
 
 # From SDCLK to the actual SD_SCK output pin
 create_generated_clock -name sd_sck -source [get_pins sdhci/sdhci/clock_div/sdclk_o_reg/Q] -multiply_by 1 [get_ports sd_sck]
@@ -120,3 +120,15 @@ set_property bitstream.config.spi_buswidth 4 [current_design]
 
 # endregion
 ###############################
+
+######################
+# region HDMI Timing #
+
+create_generated_clock -name pxl_clk -source [get_pins dvi/clk_wiz/inst/plle2_adv_inst/CLKIN1] -master_clock [get_clocks io_clk] [get_pins dvi/clk_wiz/inst/plle2_adv_inst/CLKOUT0]
+
+# All paths between pxl_clk and CLK are properly synchronised.
+set_false_path -from [get_clocks bus_clk] -to [get_clocks pxl_clk]
+set_false_path -from [get_clocks pxl_clk] -to [get_clocks bus_clk]
+
+# endregion
+####################

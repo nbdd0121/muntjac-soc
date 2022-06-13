@@ -56,7 +56,7 @@ module chip_top import prim_util_pkg::*; (
   localparam TimerClkFreq = 50;
 
   // Whether Ethernet controller should be enabled.
-  localparam EnableEth = 1'b0;
+  localparam EnableEth = 1'b1;
   localparam EnableDvi = 1'b0;
 
   localparam AddrWidth = 38;
@@ -644,6 +644,47 @@ module chip_top import prim_util_pkg::*; (
   // #region Display //
 
   if (EnableDvi) begin: dvi
+
+    `TL_DECLARE(32, 12, DeviceSourceWidth, 1, dvi_io);
+
+    dvi #(
+      .IoAddrWidth (12),
+      .IoSourceWidth (DeviceSourceWidth),
+      .DmaDataWidth (128),
+      .DmaAddrWidth (AddrWidth),
+      .DmaSourceWidth (1),
+      .DmaSinkWidth (SinkWidth)
+    ) dvi (
+      .clk_i (clk),
+      .rst_ni (rstn),
+      .io_clk_i (io_clk),
+      .hdmi_tx_clk_p,
+      .hdmi_tx_clk_n,
+      .hdmi_tx_p,
+      .hdmi_tx_n,
+      `TL_CONNECT_DEVICE_PORT(io, dvi_io),
+      `TL_CONNECT_HOST_PORT(dma, dma_dvi)
+    );
+
+    tl_adapter #(
+      .HostDataWidth (64),
+      .DeviceDataWidth (32),
+      .HostAddrWidth (AddrWidth),
+      .DeviceAddrWidth (12),
+      .HostSourceWidth (DeviceSourceWidth),
+      .DeviceSourceWidth (DeviceSourceWidth),
+      .HostSinkWidth (1),
+      .DeviceSinkWidth (1),
+      .HostMaxSize (3),
+      .DeviceMaxSize (2),
+      .HostFifo (1'b0),
+      .DeviceFifo (1'b1)
+    ) dvi_io_adapter (
+      .clk_i (clk),
+      .rst_ni (rstn),
+      `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [DviIoIdx]),
+      `TL_CONNECT_HOST_PORT(device, dvi_io)
+    );
 
   end else begin: dummy_dvi
 

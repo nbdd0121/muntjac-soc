@@ -44,6 +44,7 @@ mod sbi;
 mod timer;
 #[allow(dead_code)]
 mod uart;
+mod video;
 
 use core::arch::asm;
 use core::sync::atomic::{AtomicUsize, Ordering};
@@ -184,6 +185,8 @@ extern "C" fn main(boot: bool) -> usize {
                 kernel_size
             },
         );
+
+        video::init();
 
         // Copy DTB to end of kenrel.
         let dtb = include_bytes!(concat!(env!("OUT_DIR"), "/device_tree.dtb"));

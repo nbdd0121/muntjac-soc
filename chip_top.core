@@ -40,10 +40,13 @@ filesets:
     file_type: systemVerilogSource
 
   files_rtl_genesys_2:
+    depend:
+      - garyguo.net:peripheral:display_controller
     files:
       - genesys_2/rtl/chip_top.sv
       - genesys_2/rtl/ddr.sv
       - genesys_2/rtl/eth.sv
+      - genesys_2/rtl/dvi.sv
     file_type: systemVerilogSource
 
   files_constraints_nexys_a7:
@@ -73,6 +76,7 @@ filesets:
       - genesys_2/util/create_eth_ip.tcl
       # File copied by fusesoc into the workroot
       - genesys_2/data/mig.prj: { file_type: user, copyto: mig.prj }
+      - data/rgb2dvi.tar : { file_type: user, copyto: rgb2dvi.tar }
     file_type: tclSource
 
 parameters:

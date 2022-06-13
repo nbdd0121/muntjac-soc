@@ -9,3 +9,6 @@
 	url = git@github.com:nbdd0121/linux.git
 	branch = riscv
 	shallow = true
+[submodule "display_controller"]
+	path = display_controller
+	url = git@github.com:nbdd0121/display_controller.git
