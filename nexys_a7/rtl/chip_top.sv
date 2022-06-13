@@ -1,6 +1,6 @@
 `include "tl_util.svh"
 
-module chip_top (
+module chip_top import prim_util_pkg::*; (
   input  sys_clk_i,
   input  sys_rst_ni,
   // QSPI
@@ -47,6 +47,10 @@ module chip_top (
 
   localparam NumCores = 2;
   localparam TimerClkFreq = 50;
+
+  // Whether Ethernet controller should be enabled.
+  localparam EnableEth = 1'b1;
+
   localparam AddrWidth = 38;
   localparam DmaSourceWidth = 3;
   localparam HostSourceWidth = 2;
@@ -64,6 +68,100 @@ module chip_top (
 
   /////////////////
   // #region DMA //
+
+  localparam NumDmaDevice = 0 + EnableEth;
+
+  localparam logic [vbits(NumDmaDevice)-1:0] EthDmaIdx = 0;
+
+  localparam logic [DmaSourceWidth-1:0] EthDmaSourceMask = 3;
+  localparam logic [DmaSourceWidth-1:0] EthDmaSourceBase = 0;
+
+  `TL_DECLARE(128, AddrWidth, 2, SinkWidth, dma_eth);
+
+  if (NumDmaDevice == 0) begin: dummy_dma
+
+    assign dma_tl_a_valid = 1'b0;
+    assign dma_tl_a = 'x;
+    assign dma_tl_b_ready = 1'b0;
+    assign dma_tl_c_valid = 1'b0;
+    assign dma_tl_c = 'x;
+    assign dma_tl_d_ready = 1'b0;
+    assign dma_tl_e_valid = 1'b0;
+    assign dma_tl_e = 'x;
+
+  end else begin: dma_shifter
+
+    `TL_DECLARE_ARR(128, AddrWidth, DmaSourceWidth, SinkWidth, dma_ch_shifted, [NumDmaDevice-1:0]);
+
+    if (EnableEth) begin: eth
+      tl_source_shifter #(
+        .DataWidth (128),
+        .AddrWidth (AddrWidth),
+        .SinkWidth (SinkWidth),
+        .HostSourceWidth (2),
+        .DeviceSourceWidth (DmaSourceWidth),
+        .SourceBase (EthDmaSourceBase),
+        .SourceMask (EthDmaSourceMask)
+      ) eth_dma_shifter (
+        .clk_i (clk),
+        .rst_ni (rstn),
+        `TL_CONNECT_DEVICE_PORT(host, dma_eth),
+        `TL_CONNECT_HOST_PORT_IDX(device, dma_ch_shifted, [EthDmaIdx])
+      );
+    end
+
+    if (NumDmaDevice == 1) begin: connect
+
+      assign dma_ch_shifted_a_ready[0] = dma_tl_a_ready;
+      assign dma_tl_a_valid = dma_ch_shifted_a_valid[0];
+      assign dma_tl_a = dma_ch_shifted_a[0];
+      assign dma_tl_b_ready = dma_ch_shifted_b_ready[0];
+      assign dma_ch_shifted_b_valid[0] = dma_tl_b_valid;
+      assign dma_ch_shifted_b[0] = dma_tl_b;
+      assign dma_ch_shifted_c_ready[0] = dma_tl_c_ready;
+      assign dma_tl_c_valid = dma_ch_shifted_c_valid[0];
+      assign dma_tl_c = dma_ch_shifted_c[0];
+      assign dma_tl_d_ready = dma_ch_shifted_d_ready[0];
+      assign dma_ch_shifted_d_valid[0] = dma_tl_d_valid;
+      assign dma_ch_shifted_d[0] = dma_tl_d;
+      assign dma_ch_shifted_e_ready[0] = dma_tl_e_ready;
+      assign dma_tl_e_valid = dma_ch_shifted_e_valid[0];
+      assign dma_tl_e = dma_ch_shifted_e[0];
+
+    end else begin: socket
+
+      function automatic logic [NumDmaDevice-2:0][DmaSourceWidth-1:0] generate_socket_source_base();
+        if (EnableEth && EthDmaIdx != 0) generate_socket_source_base[EthDmaIdx - 1] = EthDmaSourceBase;
+      endfunction
+
+      function automatic logic [NumDmaDevice-2:0][DmaSourceWidth-1:0] generate_socket_source_mask();
+        if (EnableEth && EthDmaIdx != 0) generate_socket_source_mask[EthDmaIdx - 1] = EthDmaSourceMask;
+      endfunction
+
+      function automatic logic [NumDmaDevice-2:0][vbits(NumDmaDevice)-1:0] generate_socket_source_link();
+        if (EnableEth && EthDmaIdx != 0) generate_socket_source_link[EthDmaIdx - 1] = EthDmaIdx;
+      endfunction
+
+      tl_socket_m1 #(
+        .DataWidth (128),
+        .AddrWidth (AddrWidth),
+        .SourceWidth (DmaSourceWidth),
+        .SinkWidth (SinkWidth),
+        .NumLinks (NumDmaDevice),
+        .NumSourceRange (NumDmaDevice-1),
+        .SourceBase (generate_socket_source_base()),
+        .SourceMask (generate_socket_source_mask()),
+        .SourceLink (generate_socket_source_link())
+      ) dma_aggreg (
+        .clk_i (clk),
+        .rst_ni (rstn),
+        `TL_CONNECT_DEVICE_PORT(host, dma_ch_shifted),
+        `TL_CONNECT_HOST_PORT(device, dma_tl)
+      );
+
+    end
+
+  end
 
   // #endregion
   /////////////////
@@ -197,13 +295,21 @@ module chip_top (
   ///////////////////////
   // #region IO Switch //
 
-  `TL_DECLARE_ARR(64, AddrWidth, DeviceSourceWidth, 1, io_ch, [5:0]);
+  // Exclude the fixed error sink located at offset 0.
+  localparam NumIoDevice = 4 + EnableEth;
 
-  localparam [AddrWidth-1:0] PlicBaseAddr  = 'h11000000;
-  localparam [AddrWidth-1:0] PlicBaseMask  = 'h  3FFFFF;
+  // Error sink located at offset 0.
+  localparam ClintIoIdx = 1;
+  localparam PlicIoIdx = 2;
+  localparam UartIoIdx = 3;
+  localparam SdhciIoIdx = 4;
+  localparam EthIoIdx = 5;
 
   localparam [AddrWidth-1:0] ClintBaseAddr = 'h11400000;
   localparam [AddrWidth-1:0] ClintBaseMask = 'h    FFFF;
+
+  localparam [AddrWidth-1:0] PlicBaseAddr  = 'h11000000;
+  localparam [AddrWidth-1:0] PlicBaseMask  = 'h  3FFFFF;
 
   localparam [AddrWidth-1:0] UartBaseAddr  = 'h10000000;
   localparam [AddrWidth-1:0] UartBaseMask  = 'h    1FFF;
@@ -214,15 +320,41 @@ module chip_top (
   localparam [AddrWidth-1:0] EthBaseAddr   = 'h10100000;
   localparam [AddrWidth-1:0] EthBaseMask   = 'h   7FFFF;
 
+  `TL_DECLARE_ARR(64, AddrWidth, DeviceSourceWidth, 1, io_ch, [NumIoDevice:0]);
+
+  function automatic logic [NumIoDevice-1:0][AddrWidth-1:0] generate_socket_address_base();
+    generate_socket_address_base[ClintIoIdx - 1] = ClintBaseAddr;
+    generate_socket_address_base[PlicIoIdx - 1] = PlicBaseAddr;
+    generate_socket_address_base[UartIoIdx - 1] = UartBaseAddr;
+    generate_socket_address_base[SdhciIoIdx - 1] = SdhciBaseAddr;
+    if (EnableEth) generate_socket_address_base[EthIoIdx - 1] = EthBaseAddr;
+  endfunction
+
+  function automatic logic [NumIoDevice-1:0][AddrWidth-1:0] generate_socket_address_mask();
+    generate_socket_address_mask[ClintIoIdx - 1] = ClintBaseMask;
+    generate_socket_address_mask[PlicIoIdx - 1] = PlicBaseMask;
+    generate_socket_address_mask[UartIoIdx - 1] = UartBaseMask;
+    generate_socket_address_mask[SdhciIoIdx - 1] = SdhciBaseMask;
+    if (EnableEth) generate_socket_address_mask[EthIoIdx - 1] = EthBaseMask;
+  endfunction
+
+  function automatic logic [NumIoDevice-1:0][vbits(NumIoDevice+1)-1:0] generate_socket_address_link();
+    generate_socket_address_link[ClintIoIdx - 1] = ClintIoIdx;
+    generate_socket_address_link[PlicIoIdx - 1] = PlicIoIdx;
+    generate_socket_address_link[UartIoIdx - 1] = UartIoIdx;
+    generate_socket_address_link[SdhciIoIdx - 1] = SdhciIoIdx;
+    if (EnableEth) generate_socket_address_link[EthIoIdx - 1] = EthIoIdx;
+  endfunction
+
   tl_socket_1n #(
     .SourceWidth (DeviceSourceWidth),
     .AddrWidth (AddrWidth),
     .DataWidth (64),
-    .NumLinks    (6),
-    .NumAddressRange (5),
-    .AddressBase ({ClintBaseAddr, PlicBaseAddr, UartBaseAddr, SdhciBaseAddr, EthBaseAddr}),
-    .AddressMask ({ClintBaseMask, PlicBaseMask, UartBaseMask, SdhciBaseMask, EthBaseMask}),
-    .AddressLink ({3'd         1, 3'd        2, 3'd        3, 3'd         4, 3'd       5})
+    .NumLinks    (NumIoDevice + 1),
+    .NumAddressRange (NumIoDevice),
+    .AddressBase (generate_socket_address_base()),
+    .AddressMask (generate_socket_address_mask()),
+    .AddressLink (generate_socket_address_link())
   ) io_socket_1n (
     .clk_i (clk),
     .rst_ni (rstn),
@@ -259,7 +391,7 @@ module chip_top (
     .timer_clk_i (io_clk),
     .msip_o (irq_software_m),
     .mtip_o (irq_timer_m),
-    `TL_CONNECT_DEVICE_PORT_IDX(link, io_ch, [1])
+    `TL_CONNECT_DEVICE_PORT_IDX(link, io_ch, [ClintIoIdx])
   );
 
   logic [31:0] interrupts;
@@ -276,7 +408,7 @@ module chip_top (
     .interrupts_i (interrupts),
     .edge_trigger_i (edge_trigger),
     .irq_o (irq_external_s),
-    `TL_CONNECT_DEVICE_PORT_IDX(link, io_ch, [2])
+    `TL_CONNECT_DEVICE_PORT_IDX(link, io_ch, [PlicIoIdx])
   );
 
   // #endregion
@@ -321,7 +453,7 @@ module chip_top (
   ) uart_adapter (
     .clk_i (clk),
     .rst_ni (rstn),
-    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [3]),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [UartIoIdx]),
     `TL_CONNECT_HOST_PORT(device, uart_tl)
   );
 
@@ -367,7 +499,7 @@ module chip_top (
   ) sdhci_adapter (
     .clk_i (clk),
     .rst_ni (rstn),
-    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [4]),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [SdhciIoIdx]),
     `TL_CONNECT_HOST_PORT(device, sdhci_tl)
   );
 
@@ -378,7 +510,7 @@ module chip_top (
   // #region Ethernet //
 
   `TL_DECLARE(32, 19, DeviceSourceWidth, 1, eth_io);
-  `TL_DECLARE(64, 32, DmaSourceWidth, SinkWidth, eth_dma);
+  `TL_DECLARE(64, 32, 2, SinkWidth, eth_dma);
 
    logic eth_irq;
    logic dma_tx_irq;
@@ -389,7 +521,7 @@ module chip_top (
     .IoDataWidth (32),
     .IoAddrWidth (19),
     .IoSourceWidth (DeviceSourceWidth),
-    .DmaSourceWidth (DmaSourceWidth),
+    .DmaSourceWidth (2),
     .DmaSinkWidth (SinkWidth)
   ) eth (
     .clk_i (clk),
@@ -429,7 +561,7 @@ module chip_top (
   ) eth_io_adapter (
     .clk_i (clk),
     .rst_ni (rstn),
-    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [5]),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [EthIoIdx]),
     `TL_CONNECT_HOST_PORT(device, eth_io)
   );
 
@@ -438,15 +570,15 @@ module chip_top (
     .DeviceDataWidth (128),
     .HostAddrWidth (32),
     .DeviceAddrWidth (AddrWidth),
-    .HostSourceWidth (DmaSourceWidth),
-    .DeviceSourceWidth (DmaSourceWidth),
+    .HostSourceWidth (2),
+    .DeviceSourceWidth (2),
     .HostSinkWidth (SinkWidth),
     .DeviceSinkWidth (SinkWidth)
   ) eth_dma_adapter (
     .clk_i (clk),
     .rst_ni (rstn),
     `TL_CONNECT_DEVICE_PORT(host, eth_dma),
-    `TL_CONNECT_HOST_PORT(device, dma_tl)
+    `TL_CONNECT_HOST_PORT(device, dma_eth)
   );
 
   // #endregion
