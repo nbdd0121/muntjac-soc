@@ -13,7 +13,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Read device tree source file.
     // Device tree is the canonical source of truth for all the info.
-    let master_dts_file = env::var("DTS").unwrap();
+    let master_dts_file = match env::var("DTS") {
+        Ok(v) => v,
+        Err(_) => {
+            // It's very hard to get Rust analyzer to set an environment variable.
+            // In this case we'll not let build script panic, but since required
+            // files aren't generated compilation wouldn't success.
+            return Ok(());
+        }
+    };
     let mut dts = fs::read_to_string(&master_dts_file)?;
     let dts_file = "device_tree.dts";
     let dtb_file = format!("{}/device_tree.dtb", out_dir);
