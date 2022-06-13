@@ -4,7 +4,7 @@
 
 module eth #(
   parameter IoDataWidth   = 128,
-  parameter IoAddrWidth   = 30,
+  parameter IoAddrWidth   = 19,
   parameter IoSourceWidth = 5,
   parameter DmaSourceWidth = 2,
   parameter DmaSinkWidth = 1
@@ -322,11 +322,11 @@ module eth #(
     `AXI_CONNECT_HOST_PORT(device, dma_ctrl)
   );
 
-  localparam [IoAddrWidth-1:0] MacBaseAddr = 'h100000;
-  localparam [IoAddrWidth-1:0] MacBaseMask = 'h 3FFFF;
+  localparam [IoAddrWidth-1:0] MacBaseAddr = 'h00000;
+  localparam [IoAddrWidth-1:0] MacBaseMask = 'h3FFFF;
 
-  localparam [IoAddrWidth-1:0] DmaBaseAddr = 'h200000;
-  localparam [IoAddrWidth-1:0] DmaBaseMask = 'h   3FF;
+  localparam [IoAddrWidth-1:0] DmaBaseAddr = 'h40000;
+  localparam [IoAddrWidth-1:0] DmaBaseMask = 'h  3FF;
 
   `TL_DECLARE_ARR(IoDataWidth, IoAddrWidth, IoSourceWidth, 1, io_split, [1:0]);
 

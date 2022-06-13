@@ -214,20 +214,18 @@ module chip_top (
   localparam [AddrWidth-1:0] SdhciBaseAddr = 'h10010000;
   localparam [AddrWidth-1:0] SdhciBaseMask = 'h     FFF;
 
-  localparam [AddrWidth-1:0] EthMacBaseAddr = 'h10100000;
-  localparam [AddrWidth-1:0] EthMacBaseMask = 'h   3FFFF;
-  localparam [AddrWidth-1:0] EthDmaBaseAddr = 'h10200000;
-  localparam [AddrWidth-1:0] EthDmaBaseMask = 'h     3FF;
+  localparam [AddrWidth-1:0] EthBaseAddr = 'h10100000;
+  localparam [AddrWidth-1:0] EthBaseMask = 'h   7FFFF;
 
   tl_socket_1n #(
     .SourceWidth (DeviceSourceWidth),
     .AddrWidth (AddrWidth),
     .DataWidth (64),
     .NumLinks    (6),
-    .NumAddressRange (6),
-    .AddressBase ({ClintBaseAddr, PlicBaseAddr, UartBaseAddr, SdhciBaseAddr, EthMacBaseAddr, EthDmaBaseAddr}),
-    .AddressMask ({ClintBaseMask, PlicBaseMask, UartBaseMask, SdhciBaseMask, EthMacBaseMask, EthDmaBaseMask}),
-    .AddressLink ({3'd         1, 3'd        2, 3'd        3, 3'd         4, 3'd          5, 3'd          5})
+    .NumAddressRange (5),
+    .AddressBase ({ClintBaseAddr, PlicBaseAddr, UartBaseAddr, SdhciBaseAddr, EthBaseAddr}),
+    .AddressMask ({ClintBaseMask, PlicBaseMask, UartBaseMask, SdhciBaseMask, EthBaseMask}),
+    .AddressLink ({3'd         1, 3'd        2, 3'd        3, 3'd         4, 3'd       5})
   ) io_socket_1n (
     .clk_i (clk),
     .rst_ni (rstn),
@@ -382,7 +380,7 @@ module chip_top (
   //////////////////////
   // #region Ethernet //
 
-  `TL_DECLARE(32, 28, DeviceSourceWidth, 1, eth_io);
+  `TL_DECLARE(32, 19, DeviceSourceWidth, 1, eth_io);
   `TL_DECLARE(64, 32, DmaSourceWidth, SinkWidth, eth_dma);
 
   logic eth_irq;
@@ -392,7 +390,7 @@ module chip_top (
 
   eth #(
     .IoDataWidth (32),
-    .IoAddrWidth (28),
+    .IoAddrWidth (19),
     .IoSourceWidth (DeviceSourceWidth),
     .DmaSourceWidth (DmaSourceWidth),
     .DmaSinkWidth (SinkWidth)
@@ -422,7 +420,7 @@ module chip_top (
     .HostDataWidth (64),
     .DeviceDataWidth (32),
     .HostAddrWidth (AddrWidth),
-    .DeviceAddrWidth (28),
+    .DeviceAddrWidth (19),
     .HostSourceWidth (DeviceSourceWidth),
     .DeviceSourceWidth (DeviceSourceWidth),
     .HostSinkWidth (1),

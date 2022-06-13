@@ -109,7 +109,7 @@
             interrupts = <4 5 3>;
             phy-mode = "rgmii";
             clocks = <&clk>;
-            reg = /bits/ 64 <0x10100000 0x40000 0x10200000 0x10000>;
+            reg = /bits/ 64 <0x10100000 0x40000 0x10140000 0x10000>;
             xlnx,rxcsum = <2>;
             xlnx,rxmem = <0x1000>;
             xlnx,txcsum = <2>;
