@@ -27,6 +27,7 @@ enum Polarity {
 }
 
 struct Mode {
+    freq: u32,
     width: u32,
     hsync_start: u32,
     hsync_end: u32,
@@ -45,6 +46,14 @@ fn reg(addr: usize) -> *mut u32 {
 }
 
 fn set_mode(mode: &Mode) {
+    // We currently have a fixed pixel clock at 74 MHz.
+    // Check that the requested frequency is within 1% of that.
+    assert!(
+        mode.freq >= 73_260_000 && mode.freq <= 74_740_000,
+        "Requested frequency of {} Hz cannot be achieved",
+        mode.freq
+    );
+
     unsafe {
         // Disable display.
         core::ptr::write_volatile(reg(CR_ENABLE), 0);
@@ -70,6 +79,7 @@ fn turn_on() {
 }
 
 const MODE_720P_60HZ: Mode = Mode {
+    freq: 74_250_000,
     width: 1280,
     hsync_start: 1390,
     hsync_end: 1430,
@@ -82,7 +92,22 @@ const MODE_720P_60HZ: Mode = Mode {
     vpol: Polarity::Positive,
 };
 
+const MODE_1080P_30HZ: Mode = Mode {
+    freq: 74_250_000,
+    width: 1920,
+    hsync_start: 2008,
+    hsync_end: 2052,
+    htotal: 2200,
+    height: 1080,
+    vsync_start: 1084,
+    vsync_end: 1089,
+    vtotal: 1125,
+    hpol: Polarity::Positive,
+    vpol: Polarity::Positive,
+};
+
 const MODE_1080P_60HZ: Mode = Mode {
+    freq: 148_500_000,
     width: 1920,
     hsync_start: 2008,
     hsync_end: 2052,
@@ -106,7 +131,7 @@ pub fn init() {
         core::ptr::write_volatile(reg(CR_FB_COMMIT), 1);
     }
 
-    set_mode(&MODE_1080P_60HZ);
+    set_mode(&MODE_720P_60HZ);
     turn_on();
 }
 

@@ -124,7 +124,7 @@ set_property bitstream.config.spi_buswidth 4 [current_design]
 ######################
 # region HDMI Timing #
 
-create_generated_clock -name pxl_clk -source [get_pins dvi/clk_wiz/inst/plle2_adv_inst/CLKIN1] -master_clock [get_clocks io_clk] [get_pins dvi/clk_wiz/inst/plle2_adv_inst/CLKOUT0]
+create_generated_clock -name pxl_clk -source [get_pins dvi.dvi/clk_wiz/inst/plle2_adv_inst/CLKIN1] -master_clock [get_clocks io_clk] [get_pins dvi.dvi/clk_wiz/inst/plle2_adv_inst/CLKOUT0]
 
 # All paths between pxl_clk and CLK are properly synchronised.
 set_false_path -from [get_clocks bus_clk] -to [get_clocks pxl_clk]
