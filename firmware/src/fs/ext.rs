@@ -339,7 +339,7 @@ impl FileSystem {
 
         // Read the super block
         block.read_exact_at(&mut buf, 1024)?;
-        let mut superblock: SuperBlock = unsafe { mem::transmute_copy(&buf[0]) };
+        let mut superblock: SuperBlock = unsafe { mem::transmute_copy(&buf) };
 
         if superblock.magic != 0xEF53 {
             return Err(Error::Textual("Not a EXT filesystem"));
