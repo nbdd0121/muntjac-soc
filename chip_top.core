@@ -5,7 +5,7 @@ description: "Muntjac SoC toplevel"
 filesets:
   files_rtl:
     depend:
-      - lowrisc:muntjac:core
+      - garyguo.net:systems:muntjac_core_wrapper
       - lowrisc:tl:axi_adapter
       - lowrisc:tl:axi_lite_adapter
       - lowrisc:axi:common

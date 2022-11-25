@@ -1,0 +1,27 @@
+CAPI=2:
+# SPDX-License-Identifier: MIT OR Apache-2.0
+name: "garyguo.net:systems:muntjac_core_wrapper:0.1"
+description: "Muntjac Core Wrapper"
+filesets:
+  files_rtl:
+    depend:
+      - lowrisc:muntjac:core
+    file_type: systemVerilogSource
+
+  files_rtl_nexys_a7:
+    files:
+      - nexys_a7/rtl/muntjac_core_wrapper.sv
+    file_type: systemVerilogSource
+
+  files_rtl_genesys_2:
+    files:
+      - genesys_2/prebuild/muntjac_core_preset1.vm
+      - genesys_2/rtl/muntjac_core_wrapper.sv
+    file_type: systemVerilogSource
+
+targets:
+  default: &default_target
+    filesets:
+      - files_rtl
+      - target_nexys_a7 ? (files_rtl_nexys_a7)
+      - target_genesys_2 ? (files_rtl_genesys_2)

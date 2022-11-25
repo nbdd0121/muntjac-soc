@@ -97,7 +97,7 @@ module ccx import muntjac_pkg::*; #(
       end
     end
 
-    muntjac_core #(
+    muntjac_core_wrapper #(
       .DataWidth (DataWidth),
       .PhysAddrLen (AddrWidth),
       .SourceWidth (HostSourceWidth),
