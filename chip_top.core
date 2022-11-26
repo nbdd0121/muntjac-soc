@@ -6,6 +6,7 @@ filesets:
   files_rtl:
     depend:
       - garyguo.net:systems:muntjac_core_wrapper
+      - lowrisc:tl:fifo_async
       - lowrisc:tl:axi_adapter
       - lowrisc:tl:axi_lite_adapter
       - lowrisc:axi:common

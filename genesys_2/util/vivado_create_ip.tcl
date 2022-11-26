@@ -9,14 +9,6 @@ set_property STEPS.SYNTH_DESIGN.ARGS.RETIMING true [get_runs synth_1]
 create_ip -name mig_7series -vendor xilinx.com -library ip -module_name mig_7series_0
 set_property CONFIG.XML_INPUT_FILE [file normalize "${workroot}/mig.prj"] [get_ips mig_7series_0]
 
-# Create AXI Clock Converter for DDR
-create_ip -name axi_clock_converter -vendor xilinx.com -library ip -version 2.1 -module_name axi_clock_converter_ddr
-set_property -dict [list \
-    CONFIG.ADDR_WIDTH {30} \
-    CONFIG.DATA_WIDTH {128} \
-    CONFIG.ID_WIDTH {5}
-] [get_ips axi_clock_converter_ddr]
-
 # Create AXI Quad SPI
 create_ip -name axi_quad_spi -vendor xilinx.com -library ip -version 3.2 -module_name axi_quad_spi_0
 set_property -dict [list \

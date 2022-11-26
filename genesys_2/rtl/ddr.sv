@@ -120,96 +120,9 @@ module ddr #(
     .init_calib_complete (  )
   );
 
-  // Clock converter
-
-  `AXI_DECLARE(DataWidth, AddrWidth, SourceWidth, axi_sync);
-
-  axi_clock_converter_ddr clock_cvt (
-    .s_axi_aclk     (clk_o),
-    .s_axi_aresetn  (rst_no),
-    .s_axi_arready  (axi_sync_ar_ready),
-    .s_axi_arvalid  (axi_sync_ar_valid),
-    .s_axi_araddr   (axi_sync_ar.addr),
-    .s_axi_arburst  (axi_sync_ar.burst),
-    .s_axi_arcache  (axi_sync_ar.cache),
-    .s_axi_arid     (axi_sync_ar.id),
-    .s_axi_arlen    (axi_sync_ar.len),
-    .s_axi_arlock   (axi_sync_ar.lock),
-    .s_axi_arprot   (axi_sync_ar.prot),
-    .s_axi_arqos    (axi_sync_ar.qos),
-    .s_axi_arregion (axi_sync_ar.region),
-    .s_axi_arsize   (axi_sync_ar.size),
-    .s_axi_awready  (axi_sync_aw_ready),
-    .s_axi_awvalid  (axi_sync_aw_valid),
-    .s_axi_awaddr   (axi_sync_aw.addr),
-    .s_axi_awburst  (axi_sync_aw.burst),
-    .s_axi_awcache  (axi_sync_aw.cache),
-    .s_axi_awid     (axi_sync_aw.id),
-    .s_axi_awlen    (axi_sync_aw.len),
-    .s_axi_awlock   (axi_sync_aw.lock),
-    .s_axi_awprot   (axi_sync_aw.prot),
-    .s_axi_awqos    (axi_sync_aw.qos),
-    .s_axi_awregion (axi_sync_aw.region),
-    .s_axi_awsize   (axi_sync_aw.size),
-    .s_axi_bready   (axi_sync_b_ready),
-    .s_axi_bvalid   (axi_sync_b_valid),
-    .s_axi_bid      (axi_sync_b.id),
-    .s_axi_bresp    (axi_sync_b.resp),
-    .s_axi_rready   (axi_sync_r_ready),
-    .s_axi_rvalid   (axi_sync_r_valid),
-    .s_axi_rdata    (axi_sync_r.data),
-    .s_axi_rid      (axi_sync_r.id),
-    .s_axi_rlast    (axi_sync_r.last),
-    .s_axi_rresp    (axi_sync_r.resp),
-    .s_axi_wready   (axi_sync_w_ready),
-    .s_axi_wvalid   (axi_sync_w_valid),
-    .s_axi_wdata    (axi_sync_w.data),
-    .s_axi_wlast    (axi_sync_w.last),
-    .s_axi_wstrb    (axi_sync_w.strb),
-    .m_axi_aclk     (mig_clk),
-    .m_axi_aresetn  (rst_no),
-    .m_axi_arready  (axi_ar_ready),
-    .m_axi_arvalid  (axi_ar_valid),
-    .m_axi_araddr   (axi_ar.addr),
-    .m_axi_arburst  (axi_ar.burst),
-    .m_axi_arcache  (axi_ar.cache),
-    .m_axi_arid     (axi_ar.id),
-    .m_axi_arlen    (axi_ar.len),
-    .m_axi_arlock   (axi_ar.lock),
-    .m_axi_arprot   (axi_ar.prot),
-    .m_axi_arqos    (axi_ar.qos),
-    .m_axi_arregion (axi_ar.region),
-    .m_axi_arsize   (axi_ar.size),
-    .m_axi_awready  (axi_aw_ready),
-    .m_axi_awvalid  (axi_aw_valid),
-    .m_axi_awaddr   (axi_aw.addr),
-    .m_axi_awburst  (axi_aw.burst),
-    .m_axi_awcache  (axi_aw.cache),
-    .m_axi_awid     (axi_aw.id),
-    .m_axi_awlen    (axi_aw.len),
-    .m_axi_awlock   (axi_aw.lock),
-    .m_axi_awprot   (axi_aw.prot),
-    .m_axi_awqos    (axi_aw.qos),
-    .m_axi_awregion (axi_aw.region),
-    .m_axi_awsize   (axi_aw.size),
-    .m_axi_bready   (axi_b_ready),
-    .m_axi_bvalid   (axi_b_valid),
-    .m_axi_bid      (axi_b.id),
-    .m_axi_bresp    (axi_b.resp),
-    .m_axi_rready   (axi_r_ready),
-    .m_axi_rvalid   (axi_r_valid),
-    .m_axi_rdata    (axi_r.data),
-    .m_axi_rid      (axi_r.id),
-    .m_axi_rlast    (axi_r.last),
-    .m_axi_rresp    (axi_r.resp),
-    .m_axi_wready   (axi_w_ready),
-    .m_axi_wvalid   (axi_w_valid),
-    .m_axi_wdata    (axi_w.data),
-    .m_axi_wlast    (axi_w.last),
-    .m_axi_wstrb    (axi_w.strb)
-  );
-
   // TileLink to AXI bridge
+
+  `TL_DECLARE(DataWidth, AddrWidth, SourceWidth, 1, link_sync);
 
   tl_axi_adapter #(
     .DataWidth (DataWidth),
@@ -217,10 +130,28 @@ module ddr #(
     .SourceWidth (SourceWidth),
     .IdWidth (SourceWidth)
   ) adapter (
-    .clk_i (clk_o),
+    .clk_i (mig_clk),
     .rst_ni (rst_no),
+    `TL_CONNECT_DEVICE_PORT(host, link_sync),
+    `AXI_CONNECT_HOST_PORT(device, axi)
+  );
+
+  // Clock converter
+
+  tl_fifo_async #(
+    .DataWidth (DataWidth),
+    .AddrWidth (AddrWidth),
+    .SourceWidth (SourceWidth),
+    .SinkWidth (1),
+    .RequestFifoDepth (32),
+    .GrantFifoDepth (32)
+  ) cdc (
+    .clk_host_i (clk_o),
+    .rst_host_ni (rst_no),
     `TL_FORWARD_DEVICE_PORT(host, link),
-    `AXI_CONNECT_HOST_PORT(device, axi_sync)
+    .clk_device_i (mig_clk),
+    .rst_device_ni (rst_no),
+    `TL_CONNECT_HOST_PORT(device, link_sync)
   );
 
 endmodule

@@ -3,11 +3,20 @@ create_generated_clock -name mig_clk -source [get_pins ddr/ddr_ctrl/u_mig_7serie
 create_generated_clock -name bus_clk -source [get_pins ddr/ddr_ctrl/u_mig_7series_0_mig/u_ddr3_infrastructure/gen_ui_extra_clocks.mmcm_i/CLKIN1] -master_clock [get_clocks pll_clk3_out] [get_pins ddr/ddr_ctrl/u_mig_7series_0_mig/u_ddr3_infrastructure/gen_ui_extra_clocks.mmcm_i/CLKOUT0]
 create_generated_clock -name io_clk -source [get_pins ddr/ddr_ctrl/u_mig_7series_0_mig/u_ddr3_infrastructure/gen_ui_extra_clocks.mmcm_i/CLKIN1] -master_clock [get_clocks pll_clk3_out] [get_pins ddr/ddr_ctrl/u_mig_7series_0_mig/u_ddr3_infrastructure/gen_ui_extra_clocks.mmcm_i/CLKOUT1]
 
+##################
+# region DDR CDC #
+##################
+
+set_false_path -from [get_clocks bus_clk] -to [get_clocks mig_clk]
+set_false_path -from [get_clocks mig_clk] -to [get_clocks bus_clk]
+set_max_delay -from [get_clocks bus_clk] -to [get_clocks mig_clk] -datapath_only 5
+set_max_delay -from [get_clocks mig_clk] -to [get_clocks bus_clk] -datapath_only 5
+
 ####################
 # region SD Timing #
 
 # From SD base clock to the generated SDCLK
-create_generated_clock -name sdclk -source [get_pins sdhci/sdhci/clock_div/ui_addn_clk_1] -divide_by 2 [get_pins sdhci/sdhci/clock_div/sdclk_o_reg/Q]
+create_generated_clock -name sdclk -source [get_pins sdhci/sdhci/clock_div/io_clk_o] -divide_by 2 [get_pins sdhci/sdhci/clock_div/sdclk_o_reg/Q]
 
 # From SDCLK to the actual SD_SCK output pin
 create_generated_clock -name sd_sck -source [get_pins sdhci/sdhci/clock_div/sdclk_o_reg/Q] -multiply_by 1 [get_ports sd_sck]
