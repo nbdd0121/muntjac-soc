@@ -1,6 +1,7 @@
 #include "platform.h"
 
 .section .text.start
+.option arch, +zicsr
 .globl _start
 _start:
 .option push

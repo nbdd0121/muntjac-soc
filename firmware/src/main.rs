@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(thread_local)]
-#![feature(default_alloc_error_handler)]
 
 #[macro_use]
 extern crate alloc;
