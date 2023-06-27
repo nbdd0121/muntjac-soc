@@ -4,6 +4,7 @@
 .option arch, +zicsr
 .globl _start
 _start:
+.type _start, @function
 .option push
 .option norelax
     # Initialise all registers to zero
@@ -136,10 +137,12 @@ _start:
     li t0, 0x800
     csrw mstatus, t0
     mret
+.size _start, .-_start
 
 .section .text
 .extern handle_interrupt
 .balign 16, 1
+.type handler, @function
 handler:
     # Setup stack MSCRATCH
     csrrw sp, mscratch, sp
@@ -276,3 +279,4 @@ handler:
     sd x3, 3 * 8(sp)
     sd x4, 4 * 8(sp)
     j 11b
+.size handler, . - handler

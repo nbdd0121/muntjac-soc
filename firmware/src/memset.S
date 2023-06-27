@@ -1,5 +1,6 @@
 .global memset
 .balign 16, 1
+.type memset, @function
 memset:
     /* Save for return value */
     mv   t6, a0
@@ -108,3 +109,4 @@ memset:
 
     mv   a0, t6
     ret
+.size memset, . - memset

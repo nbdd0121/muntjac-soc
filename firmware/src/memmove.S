@@ -1,6 +1,7 @@
 .extern memcpy
 .balign 16, 1
 .global memmove
+.type memmove, @function
 memmove:
     /*
      * Here we determine if forward copy is possible. Forward copy is
@@ -120,3 +121,4 @@ memmove:
     add  a1, a1, a3
 
     j    .Lbyte_copy_tail
+.size memmove, . - memmove

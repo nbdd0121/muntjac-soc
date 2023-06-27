@@ -1,5 +1,6 @@
 .balign 16, 1
 .global memcpy
+.type memcpy, @function
 memcpy:
     /* Save for return value */
     mv   t6, a0
@@ -147,3 +148,4 @@ memcpy:
     add  a1, a1, a3
 
     j    .Lbyte_copy_tail
+.size memcpy, . - memcpy
