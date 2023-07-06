@@ -50,12 +50,12 @@ module dvi #(
   logic [31:0] bram_wrdata;
   logic [31:0] bram_rddata;
 
-  `AXI_DECLARE(DmaDataWidth, DmaAddrWidth, 1, axi);
+  `TL_DECLARE(DmaDataWidth, DmaAddrWidth, DmaSourceWidth, 1, axi);
 
   display_controller #(
     .DataWidth (DmaDataWidth),
     .AddrWidth (DmaAddrWidth),
-    .IdWidth (1)
+    .SourceWidth (DmaSourceWidth)
   ) display (
     .clk_i (clk_i),
     .rst_ni (rst_ni),
@@ -73,7 +73,7 @@ module dvi #(
     .ctrl_addr_i ({bram_addr, 2'b0}),
     .ctrl_wrdata_i (bram_wrdata),
     .ctrl_rddata_o (bram_rddata),
-    `AXI_CONNECT_HOST_PORT(dma, axi)
+    `TL_CONNECT_HOST_PORT(dma, axi)
   );
 
   tl_adapter_bram #(
@@ -93,16 +93,16 @@ module dvi #(
     .bram_rdata_i (bram_rddata)
   );
 
-  axi_tl_adapter #(
+  tl_adapter #(
     .DataWidth (DmaDataWidth),
     .AddrWidth (DmaAddrWidth),
     .SourceWidth (DmaSourceWidth),
-    .SinkWidth (DmaSinkWidth),
-    .IdWidth (1)
+    .HostSinkWidth (1),
+    .DeviceSinkWidth (DmaSinkWidth)
   ) dma_bridge (
     .clk_i,
     .rst_ni,
-    `AXI_CONNECT_DEVICE_PORT(host, axi),
+    `TL_CONNECT_DEVICE_PORT(host, axi),
     `TL_FORWARD_HOST_PORT(device, dma)
   );
 
