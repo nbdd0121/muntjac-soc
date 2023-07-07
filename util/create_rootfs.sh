@@ -33,12 +33,12 @@ if [ ! -z "$MISSING_PKG" ]; then
 fi
 
 # Check if the key is actually installed - might not be the case on Ubuntu
-if ! (apt-key export 0xE852514F5DF312F6 2>/dev/null | grep PGP -q); then
+if ! (apt-key export 0xB523E5F3FC4E5F2C 2>/dev/null | grep PGP -q); then
     echo "I: Missing debian ports keyring"
     read -p "Do you want to import them using apt-key? [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        wget -O - https://www.ports.debian.org/archive_2022.key | apt-key add -
+        wget -O - https://www.ports.debian.org/archive_2024.key | apt-key add -
     else
         exit 1
     fi

@@ -20,8 +20,9 @@ The SoC contains the following components out of the box:
 
 ## Supported Targets
 
-Currently two FPGA boards are supported:
+Currently these FPGA boards are supported:
 * Nexys A7
+* Nexys Video
 * Genesys 2
 
 ## Licensing

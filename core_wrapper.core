@@ -13,6 +13,11 @@ filesets:
       - nexys_a7/rtl/muntjac_core_wrapper.sv
     file_type: systemVerilogSource
 
+  files_rtl_nexys_video:
+    files:
+      - nexys_video/rtl/muntjac_core_wrapper.sv
+    file_type: systemVerilogSource
+
   files_rtl_genesys_2:
     files:
       - genesys_2/prebuild/muntjac_core_preset1.vm
@@ -24,4 +29,5 @@ targets:
     filesets:
       - files_rtl
       - target_nexys_a7 ? (files_rtl_nexys_a7)
+      - target_nexys_video ? (files_rtl_nexys_video)
       - target_genesys_2 ? (files_rtl_genesys_2)

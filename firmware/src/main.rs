@@ -186,7 +186,7 @@ extern "C" fn main(boot: bool) -> usize {
             },
         );
 
-        video::init();
+        // video::init();
 
         // Copy DTB to end of kenrel.
         let dtb = include_bytes!(concat!(env!("OUT_DIR"), "/device_tree.dtb"));

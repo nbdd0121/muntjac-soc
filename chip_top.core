@@ -39,6 +39,12 @@ filesets:
       - nexys_a7/rtl/eth.sv
     file_type: systemVerilogSource
 
+  files_rtl_nexys_video:
+    files:
+      - nexys_video/rtl/chip_top.sv
+      - nexys_video/rtl/ddr.sv
+    file_type: systemVerilogSource
+
   files_rtl_genesys_2:
     depend:
       - garyguo.net:peripheral:display_controller
@@ -55,6 +61,12 @@ filesets:
       - nexys_a7/data/pins.xdc
     file_type: xdc
 
+  files_constraints_nexys_video:
+    files:
+      - nexys_video/data/clocks.xdc
+      - nexys_video/data/pins.xdc
+    file_type: xdc
+
   files_constraints_genesys_2:
     files:
       - genesys_2/data/clocks.xdc
@@ -68,6 +80,14 @@ filesets:
       # File copied by fusesoc into the workroot
       - nexys_a7/data/mig.prj: { file_type: user, copyto: mig.prj }
       - data/mii_to_rmii_v2_0.tar : { file_type: user, copyto: mii_to_rmii_v2_0.tar }
+    file_type: tclSource
+
+  files_tcl_nexys_video:
+    files:
+      - nexys_video/util/vivado_create_ip.tcl
+      - nexys_video/util/create_eth_ip.tcl
+      # Files copied by fusesoc into the workroot
+      - nexys_video/data/mig.prj : { file_type: user, copyto: mig.prj }
     file_type: tclSource
 
   files_tcl_genesys_2:
@@ -104,6 +124,20 @@ targets:
     tools:
       vivado:
         part: "xc7a100tcsg324-1"
+
+  nexys_video:
+    default_tool: vivado
+    filesets:
+      - files_rtl
+      - files_rtl_nexys_video
+      - files_constraints_nexys_video
+      - files_tcl_nexys_video
+    toplevel: chip_top
+    parameters:
+      - PRIM_DEFAULT_IMPL=prim_pkg::ImplXilinx
+    tools:
+      vivado:
+        part: "xc7a200tsbg484-1"
 
   genesys_2:
     default_tool: vivado

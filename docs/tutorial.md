@@ -5,6 +5,7 @@
 To run this tutorial, you will need one of the supported FPGA boards. Currently, the following FPGAs
 are supported:
 * Nexys A7
+* Nexys Video
 * Genesys 2
 
 For this tutotial you will also need a microSD card (and a card reader).

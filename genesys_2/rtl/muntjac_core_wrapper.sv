@@ -87,7 +87,9 @@ module muntjac_core_wrapper import muntjac_pkg::*; #(
       .ITlbSetsWidth    (ITlbSetsWidth),
       .MHPMCounterNum   (MHPMCounterNum),
       .MHPMICacheEnable (MHPMICacheEnable),
-      .MHPMDCacheEnable (MHPMDCacheEnable)
+      .MHPMDCacheEnable (MHPMDCacheEnable),
+      .SourceWidth      (SourceWidth),
+      .SinkWidth        (SinkWidth)
     ) core (
       .clk_i,
       .rst_ni,
