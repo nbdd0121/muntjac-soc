@@ -83,7 +83,7 @@ const MODE_720P_60HZ: Mode = Mode {
     width: 1280,
     hsync_start: 1390,
     hsync_end: 1430,
-    htotal: 1360,
+    htotal: 1650,
     height: 720,
     vsync_start: 725,
     vsync_end: 730,
