@@ -1,3 +1,7 @@
+#![allow(unused)]
+
+pub mod fbcon;
+
 const CR_ENABLE: usize = 0x0000;
 const CR_PXLFREQ: usize = 0x0004;
 const CR_POLARITY: usize = 0x0008;
@@ -132,6 +136,14 @@ const MODE_1080P_60HZ: Mode = Mode {
     vpol: Polarity::Positive,
 };
 
+#[cfg(feature = "fbcon")]
+static mut FBCON: Option<fbcon::Fbcon<'static>> = None;
+
+#[cfg(feature = "fbcon")]
+pub unsafe fn get_fbcon() -> Option<&'static mut fbcon::Fbcon<'static>> {
+    unsafe { FBCON.as_mut() }
+}
+
 pub fn init() {
     unsafe {
         core::ptr::write_volatile(
@@ -148,4 +160,24 @@ pub fn init() {
 
     set_mode(&MODE_720P_30HZ);
     turn_on();
+
+    #[cfg(feature = "fbcon")]
+    {
+        let framebuffer = unsafe {
+            core::slice::from_raw_parts_mut(
+                crate::address::FRAMEBUFFER_BASE as *mut u8,
+                1280 * 720 * 2,
+            )
+        };
+        let fb = fbcon::Framebuffer {
+            framebuffer,
+            width: 1280,
+            height: 720,
+            bpl: 1280 * 2,
+            bpp: 2,
+        };
+        unsafe {
+            FBCON = Some(fbcon::Fbcon::new(fb));
+        }
+    }
 }

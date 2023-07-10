@@ -109,9 +109,14 @@ fn sbi_remote_sfence_vma_asid(
     Ok(0)
 }
 
+fn shutdown() -> ! {
+    println!("\x1CIt is now safe to turn off your computer");
+    super::abort();
+}
+
 fn sbi_system_reset(reset_type: usize, _reset_reason: usize) -> SbiResult {
     match reset_type {
-        0 => panic!("shutdown"),
+        0 => shutdown(),
         1 => panic!("cold reboot"),
         2 => panic!("warm reboot"),
         _ => Err(SbiError::InvalidParam),

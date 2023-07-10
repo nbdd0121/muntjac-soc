@@ -20,13 +20,13 @@ ro_cell = "0.1"
 spin = "0.9"
 log = { version = "0.4", default-features = false }
 unwinding = { version = "0.1.4", default-features = false, features = ["unwinder", "personality", "fde-gnu-eh-frame-hdr", "panicking"] }
-
-[patch.crates-io]
+psf2 = { version = "0.4", default-features = false, optional = true }
 
 [features]
 fp-mem = []
 fp-none = ["fp-mem"]
-default = ["fp-none"]
+fbcon = ["psf2"]
+default = ["fp-none", "fbcon"]
 
 [profile.release]
 opt-level = 3

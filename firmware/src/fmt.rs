@@ -19,7 +19,14 @@ impl Write for Console {
 }
 
 pub fn console_write(args: core::fmt::Arguments<'_>) {
-    CONSOLE.lock().write_fmt(args).unwrap();
+    let mut guard = CONSOLE.lock();
+    guard.write_fmt(args).unwrap();
+    #[cfg(feature = "fbcon")]
+    {
+        if let Some(fbcon) = unsafe { crate::video::get_fbcon() } {
+            fbcon.write_fmt(args).unwrap();
+        }
+    }
 }
 
 macro_rules! format_args_nl {
@@ -76,12 +83,28 @@ impl log::Log for Logger {
                 log::Level::Warn => "33",
                 log::Level::Error => "31",
             };
-            println!(
-                "\x1b[{color}m{level}:{target}:{msg}\x1b[0m",
+
+            let mut guard = CONSOLE.lock();
+            guard.write_fmt(format_args!("\x1b[{color}m")).unwrap();
+
+            match format_args!(
+                "{level}:{target}:{msg}\n",
                 level = record.level(),
                 target = record.target(),
                 msg = record.args()
-            );
+            ) {
+                fmt => {
+                    guard.write_fmt(fmt).unwrap();
+                    #[cfg(feature = "fbcon")]
+                    {
+                        if let Some(fbcon) = unsafe { crate::video::get_fbcon() } {
+                            fbcon.write_fmt(fmt).unwrap();
+                        }
+                    }
+                }
+            }
+
+            guard.write_str("\x1b[0m").unwrap();
         }
     }
     fn flush(&self) {}

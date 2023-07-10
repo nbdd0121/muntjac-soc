@@ -39,6 +39,7 @@ dependencies = [
  "cc",
  "fdt",
  "log",
+ "psf2",
  "rand",
  "regex",
  "riscv",
@@ -130,6 +131,12 @@ name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
+
+[[package]]
+name = "psf2"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db6e6132ee58c113ff86d61c49cb934dd45b3b59971442d0f9e982e62dff5457"
 
 [[package]]
 name = "rand"

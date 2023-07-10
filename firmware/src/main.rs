@@ -159,6 +159,9 @@ extern "C" fn main(boot: bool) -> usize {
             lcr: 0b11,
         });
 
+        #[cfg(has_display)]
+        video::init();
+
         println!("Booting...");
 
         fp::init_fp();
@@ -191,9 +194,6 @@ extern "C" fn main(boot: bool) -> usize {
                 kernel_size
             },
         );
-
-        #[cfg(has_display)]
-        video::init();
 
         // Copy DTB to end of kenrel.
         let dtb = include_bytes!(concat!(env!("OUT_DIR"), "/device_tree.dtb"));
