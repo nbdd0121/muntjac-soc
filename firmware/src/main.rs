@@ -44,6 +44,7 @@ mod sbi;
 mod timer;
 #[allow(dead_code)]
 mod uart;
+#[cfg(has_display)]
 mod video;
 
 use core::arch::asm;
@@ -186,7 +187,8 @@ extern "C" fn main(boot: bool) -> usize {
             },
         );
 
-        // video::init();
+        #[cfg(has_display)]
+        video::init();
 
         // Copy DTB to end of kenrel.
         let dtb = include_bytes!(concat!(env!("OUT_DIR"), "/device_tree.dtb"));

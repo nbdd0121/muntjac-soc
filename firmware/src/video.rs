@@ -18,8 +18,6 @@ const CR_FB_DEPTH: usize = 0x58;
 const CR_FB_BPL: usize = 0x5C;
 const CR_BG_COLOR: usize = 0x60;
 
-const DISPLAY_BASE: usize = 0x10020000;
-
 #[derive(Clone, Copy)]
 enum Polarity {
     Positive = 0,
@@ -42,7 +40,7 @@ struct Mode {
 
 #[inline]
 fn reg(addr: usize) -> *mut u32 {
-    (DISPLAY_BASE + addr) as _
+    (crate::address::DISPLAY_BASE + addr) as _
 }
 
 fn set_mode(mode: &Mode) {
@@ -122,7 +120,10 @@ const MODE_1080P_60HZ: Mode = Mode {
 
 pub fn init() {
     unsafe {
-        core::ptr::write_volatile(reg(CR_FB_BASE) as *mut u64, 0x7f600000);
+        core::ptr::write_volatile(
+            reg(CR_FB_BASE) as *mut usize,
+            crate::address::FRAMEBUFFER_BASE,
+        );
         core::ptr::write_volatile(reg(CR_FB_WIDTH), 1920);
         core::ptr::write_volatile(reg(CR_FB_HEIGHT), 1080);
         // a8b8g8r8
@@ -134,4 +135,3 @@ pub fn init() {
     set_mode(&MODE_720P_60HZ);
     turn_on();
 }
-

@@ -106,6 +106,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dts = re.replace(&dts, "").into_owned();
     };
 
+    // Find the address of display controller and remove that node.
+    let display_base;
+    if let Some(node) = fdt.find_compatible(&["garyguo,display-controller"]) {
+        let reg = node.raw_reg().unwrap().next().unwrap();
+        display_base = Some(u64::from_be_bytes(reg.address.try_into()?));
+
+        let re = Regex::new(&format!(r"{}\s*\{{[^}}]*\}}\s*;\s*", node.name)).unwrap();
+        dts = re.replace(&dts, "").into_owned();
+    } else {
+        display_base = None;
+    }
+
     // Compile modified device tree source into binary.
     fs::write(&dts_file, dts)?;
     let status = Command::new("dtc")
@@ -134,6 +146,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "pub const CLINT_BASE: usize = {:#x};",
         clint_base
     )?;
+
+    if let Some(display_base) = display_base {
+        println!("cargo:rustc-cfg=has_display");
+        writeln!(
+            generated_rs,
+            "pub const DISPLAY_BASE: usize = {:#x};",
+            display_base
+        )?;
+    }
 
     // Extract UART address.
     if let Some(node) = fdt.find_compatible(&["ns16550a"]) {
@@ -174,6 +195,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             generated_rs,
             "pub const MAC_ADDRESS: [u8; 6] = {:?};",
             mac_addr.expect("Ethernet controller exists but not a mac address")
+        )?;
+    }
+
+    if let Some(node) = fdt.find_node("/reserved-memory/framebuffer") {
+        let reg = node.raw_reg().unwrap().next().unwrap();
+        let base = u64::from_be_bytes(reg.address.try_into()?);
+        writeln!(
+            generated_rs,
+            "pub const FRAMEBUFFER_BASE: usize = {:#x};",
+            base
         )?;
     }
 
