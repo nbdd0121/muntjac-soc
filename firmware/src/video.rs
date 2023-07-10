@@ -90,6 +90,20 @@ const MODE_720P_60HZ: Mode = Mode {
     vpol: Polarity::Positive,
 };
 
+const MODE_720P_30HZ: Mode = Mode {
+    freq: 74_250_000,
+    width: 1280,
+    hsync_start: 3040,
+    hsync_end: 3080,
+    htotal: 3300,
+    height: 720,
+    vsync_start: 725,
+    vsync_end: 730,
+    vtotal: 750,
+    hpol: Polarity::Positive,
+    vpol: Polarity::Positive,
+};
+
 const MODE_1080P_30HZ: Mode = Mode {
     freq: 74_250_000,
     width: 1920,
@@ -132,6 +146,6 @@ pub fn init() {
         core::ptr::write_volatile(reg(CR_FB_COMMIT), 1);
     }
 
-    set_mode(&MODE_720P_60HZ);
+    set_mode(&MODE_720P_30HZ);
     turn_on();
 }
