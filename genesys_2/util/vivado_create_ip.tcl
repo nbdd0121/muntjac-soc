@@ -5,6 +5,13 @@ if {!([file exists "${workroot}/ip/rgb2dvi"])} {
     exec mkdir -p "${workroot}/ip"
     exec tar -xvzf "${workroot}/rgb2dvi.tar" -C "${workroot}/ip"
 }
+
+# Ensure that axi_ps2 IP is extracted
+if {!([file exists "${workroot}/ip/axi_ps2_1.0"])} {
+    exec mkdir -p "${workroot}/ip"
+    exec tar -xvzf "${workroot}/axi_ps2_1.0.tar.gz" -C "${workroot}/ip"
+}
+
 set_property ip_repo_paths [file normalize "${workroot}/ip"] [current_project]
 update_ip_catalog
 
@@ -125,3 +132,5 @@ set_property -dict [list \
     CONFIG.kRstActiveHigh {false} \
     CONFIG.kGenerateSerialClk {false} \
 ] [get_ips rgb2dvi_0]
+
+create_ip -name axi_ps2 -vendor digilentinc.com -library IP -version 1.0 -module_name axi_ps2_0
