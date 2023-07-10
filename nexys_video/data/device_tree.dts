@@ -96,6 +96,12 @@
             reg-io-width = <4>;
         };
 
+        ps2@10030000 {
+            compatible = "digilent,axi-ps2-1.0";
+            reg = /bits/ 64 <0x10030000 0x1000>;
+            interrupts-extended = <&plic 0x7>;
+        };
+
         mmc@10010000 {
             compatible = "garyguo,sdhci";
             reg = <0x00 0x10010000 0x00 0x1000>;

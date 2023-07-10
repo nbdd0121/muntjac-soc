@@ -33,6 +33,10 @@ module chip_top import prim_util_pkg::*; (
   output [2:0] hdmi_tx_p,
   output [2:0] hdmi_tx_n,
 
+  // PS/2
+  inout        ps2_clk,
+  inout        ps2_dat,
+
   // DDR
   output [14:0] ddr3_sdram_addr,
   output [2:0]  ddr3_sdram_ba,
@@ -334,14 +338,15 @@ module chip_top import prim_util_pkg::*; (
   // #region IO Switch //
 
   // Exclude the fixed error sink located at offset 0.
-  localparam NumIoDevice = 4 + EnableEth + EnableDvi;
+  localparam NumIoDevice = 5 + EnableEth + EnableDvi;
 
   // Error sink located at offset 0.
   localparam ClintIoIdx = 1;
   localparam PlicIoIdx = 2;
   localparam UartIoIdx = 3;
   localparam SdhciIoIdx = 4;
-  localparam EthIoIdx = 5;
+  localparam Ps2IoIdx = 5;
+  localparam EthIoIdx = 6;
   localparam DviIoIdx = EnableEth ? EthIoIdx + 1 : EthIoIdx;
 
   localparam [AddrWidth-1:0] ClintBaseAddr = 'h11400000;
@@ -356,6 +361,9 @@ module chip_top import prim_util_pkg::*; (
   localparam [AddrWidth-1:0] SdhciBaseAddr = 'h10010000;
   localparam [AddrWidth-1:0] SdhciBaseMask = 'h     FFF;
 
+  localparam [AddrWidth-1:0] Ps2BaseAddr   = 'h10030000;
+  localparam [AddrWidth-1:0] Ps2BaseMask   = 'h     FFF;
+
   localparam [AddrWidth-1:0] EthBaseAddr   = 'h10100000;
   localparam [AddrWidth-1:0] EthBaseMask   = 'h   7FFFF;
 
@@ -369,6 +377,7 @@ module chip_top import prim_util_pkg::*; (
     generate_socket_address_base[PlicIoIdx - 1] = PlicBaseAddr;
     generate_socket_address_base[UartIoIdx - 1] = UartBaseAddr;
     generate_socket_address_base[SdhciIoIdx - 1] = SdhciBaseAddr;
+    generate_socket_address_base[Ps2IoIdx - 1] = Ps2BaseAddr;
     if (EnableEth) generate_socket_address_base[EthIoIdx - 1] = EthBaseAddr;
     if (EnableDvi) generate_socket_address_base[DviIoIdx - 1] = DviBaseAddr;
   endfunction
@@ -378,6 +387,7 @@ module chip_top import prim_util_pkg::*; (
     generate_socket_address_mask[PlicIoIdx - 1] = PlicBaseMask;
     generate_socket_address_mask[UartIoIdx - 1] = UartBaseMask;
     generate_socket_address_mask[SdhciIoIdx - 1] = SdhciBaseMask;
+    generate_socket_address_mask[Ps2IoIdx - 1] = Ps2BaseMask;
     if (EnableEth) generate_socket_address_mask[EthIoIdx - 1] = EthBaseMask;
     if (EnableDvi) generate_socket_address_mask[DviIoIdx - 1] = DviBaseMask;
   endfunction
@@ -387,6 +397,7 @@ module chip_top import prim_util_pkg::*; (
     generate_socket_address_link[PlicIoIdx - 1] = PlicIoIdx;
     generate_socket_address_link[UartIoIdx - 1] = UartIoIdx;
     generate_socket_address_link[SdhciIoIdx - 1] = SdhciIoIdx;
+    generate_socket_address_link[Ps2IoIdx - 1] = Ps2IoIdx;
     if (EnableEth) generate_socket_address_link[EthIoIdx - 1] = EthIoIdx;
     if (EnableDvi) generate_socket_address_link[DviIoIdx - 1] = DviIoIdx;
   endfunction
@@ -550,6 +561,47 @@ module chip_top import prim_util_pkg::*; (
 
   // #endregion
   ///////////////////
+
+  ///////////////////////////////
+  // #region PS/2 Input Device //
+
+  `TL_DECLARE(32, 5, 1, 1, ps2_tl);
+
+  logic irq_ps2;
+
+  ps2 #(
+    .SourceWidth (1)
+  ) ps2 (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    .ps2_clk,
+    .ps2_dat,
+    `TL_CONNECT_DEVICE_PORT(link, ps2_tl),
+    .irq_o (irq_ps2)
+  );
+
+  tl_adapter #(
+    .HostDataWidth (64),
+    .DeviceDataWidth (32),
+    .HostAddrWidth (AddrWidth),
+    .DeviceAddrWidth (5),
+    .HostSourceWidth (DeviceSourceWidth),
+    .DeviceSourceWidth (1),
+    .HostSinkWidth (1),
+    .DeviceSinkWidth (1),
+    .HostMaxSize (3),
+    .DeviceMaxSize (2),
+    .HostFifo (1'b0),
+    .DeviceFifo (1'b1)
+  ) ps2_adapter (
+    .clk_i (clk),
+    .rst_ni (rstn),
+    `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [Ps2IoIdx]),
+    `TL_CONNECT_HOST_PORT(device, ps2_tl)
+  );
+
+  // #endregion
+  ///////////////////////////////
 
   //////////////////////
   // #region Ethernet //
@@ -729,6 +781,10 @@ module chip_top import prim_util_pkg::*; (
     // SD IRQ is level-triggered
     interrupts[2] = irq_sd;
     edge_trigger[1] = 1'b0;
+
+    // PS2 IRQ is level-triggered
+    interrupts[7] = irq_ps2;
+    edge_trigger[7] = 1'b0;
 
     // Ethernet IRQs are all level-triggered
     if (EnableEth) begin

@@ -93,6 +93,7 @@ filesets:
       # Files copied by fusesoc into the workroot
       - nexys_video/data/mig.prj : { file_type: user, copyto: mig.prj }
       - data/rgb2dvi.tar : { file_type: user, copyto: rgb2dvi.tar }
+      - data/axi_ps2_1.0.tar.gz : { file_type: user, copyto: axi_ps2_1.0.tar.gz }
     file_type: tclSource
 
   files_tcl_genesys_2:

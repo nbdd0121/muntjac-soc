@@ -15,7 +15,7 @@ module ps2 # (
 
   // TileLink port
   `TL_DECLARE_DEVICE_PORT(32, 5, SourceWidth, 1, link),
- 
+
   // Interrupt
   output irq_o
 );
