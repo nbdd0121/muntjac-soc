@@ -201,10 +201,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(node) = fdt.find_node("/reserved-memory/framebuffer") {
         let reg = node.raw_reg().unwrap().next().unwrap();
         let base = u64::from_be_bytes(reg.address.try_into()?);
+        let size = u64::from_be_bytes(reg.size.try_into()?);
         writeln!(
             generated_rs,
             "pub const FRAMEBUFFER_BASE: usize = {:#x};",
             base
+        )?;
+        writeln!(
+            generated_rs,
+            "pub const FRAMEBUFFER_SIZE: usize = {:#x};",
+            size
         )?;
     }
 

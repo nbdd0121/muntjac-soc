@@ -167,7 +167,12 @@ extern "C" fn main(boot: bool) -> usize {
         ipi::probe_hart_count();
         allocator::init();
 
-        let kernel_memory_size = address::MEMORY_SIZE - 0x200000;
+        let mut kernel_memory_end = address::MEMORY_BASE + address::MEMORY_SIZE - 0x200000;
+        #[cfg(has_display)]
+        {
+            kernel_memory_end = core::cmp::min(kernel_memory_end, address::FRAMEBUFFER_BASE);
+        }
+        let kernel_memory_size = kernel_memory_end - address::MEMORY_BASE;
 
         // memtest::memtest(unsafe {
         //     core::slice::from_raw_parts_mut(address::MEMORY_BASE as *mut usize, kernel_memory_size / 8)
