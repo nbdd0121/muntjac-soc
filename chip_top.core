@@ -40,9 +40,12 @@ filesets:
     file_type: systemVerilogSource
 
   files_rtl_nexys_video:
+    depend:
+      - garyguo.net:peripheral:display_controller
     files:
       - nexys_video/rtl/chip_top.sv
       - nexys_video/rtl/ddr.sv
+      - nexys_video/rtl/dvi.sv
     file_type: systemVerilogSource
 
   files_rtl_genesys_2:
@@ -88,6 +91,7 @@ filesets:
       - nexys_video/util/create_eth_ip.tcl
       # Files copied by fusesoc into the workroot
       - nexys_video/data/mig.prj : { file_type: user, copyto: mig.prj }
+      - data/rgb2dvi.tar : { file_type: user, copyto: rgb2dvi.tar }
     file_type: tclSource
 
   files_tcl_genesys_2:

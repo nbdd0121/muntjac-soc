@@ -26,6 +26,13 @@ module chip_top import prim_util_pkg::*; (
   // input        rmii_rx_er,
   // output       phy_rst_n,
   // input        phy_irq_i,
+
+  // HDMI
+  output       hdmi_tx_clk_p,
+  output       hdmi_tx_clk_n,
+  output [2:0] hdmi_tx_p,
+  output [2:0] hdmi_tx_n,
+
   // DDR
   output [14:0] ddr3_sdram_addr,
   output [2:0]  ddr3_sdram_ba,
@@ -48,6 +55,9 @@ module chip_top import prim_util_pkg::*; (
 
   // Whether Ethernet controller should be enabled.
   localparam EnableEth = 1'b0;
+  localparam EnableDvi = 1'b1;
+
+  localparam DviDmaSourceWidth = 2;
 
   localparam AddrWidth = 38;
   localparam DmaSourceWidth = 3;
@@ -67,14 +77,24 @@ module chip_top import prim_util_pkg::*; (
   /////////////////
   // #region DMA //
 
-  localparam NumDmaDevice = 0 + EnableEth;
+  localparam NumDmaDevice = 0 + EnableEth + EnableDvi;
 
   localparam logic [vbits(NumDmaDevice)-1:0] EthDmaIdx = 0;
+  localparam logic [vbits(NumDmaDevice)-1:0] DviDmaIdx = EnableEth ? EthDmaIdx + 1 : EthDmaIdx;
 
   localparam logic [DmaSourceWidth-1:0] EthDmaSourceMask = 3;
   localparam logic [DmaSourceWidth-1:0] EthDmaSourceBase = 0;
 
+  localparam logic [DmaSourceWidth-1:0] DviDmaSourceMask = (1 << DviDmaSourceWidth) - 1;
+  localparam logic [DmaSourceWidth-1:0] DviDmaSourceBase =
+    ((EnableEth ? EthDmaSourceBase + EthDmaSourceMask + 1 : EthDmaSourceBase) + DviDmaSourceMask) &~ DviDmaSourceMask;
+
+  if (DviDmaSourceBase + DviDmaSourceMask >= (1 << DmaSourceWidth)) begin
+    $error("Not enough DMA source IDs");
+  end
+
   `TL_DECLARE(128, AddrWidth, 2, SinkWidth, dma_eth);
+  `TL_DECLARE(128, AddrWidth, DviDmaSourceWidth, SinkWidth, dma_dvi);
 
   if (NumDmaDevice == 0) begin: dummy_dma
 
@@ -108,6 +128,23 @@ module chip_top import prim_util_pkg::*; (
       );
     end
 
+    if (EnableDvi) begin: dvi
+      tl_source_shifter #(
+        .DataWidth (128),
+        .AddrWidth (AddrWidth),
+        .SinkWidth (SinkWidth),
+        .HostSourceWidth (DviDmaSourceWidth),
+        .DeviceSourceWidth (DmaSourceWidth),
+        .SourceBase (DviDmaSourceBase),
+        .SourceMask (DviDmaSourceMask)
+      ) dvi_dma_shifter (
+        .clk_i (clk),
+        .rst_ni (rstn),
+        `TL_CONNECT_DEVICE_PORT(host, dma_dvi),
+        `TL_CONNECT_HOST_PORT_IDX(device, dma_ch_shifted, [DviDmaIdx])
+      );
+    end
+
     if (NumDmaDevice == 1) begin: connect
 
       assign dma_ch_shifted_a_ready[0] = dma_tl_a_ready;
@@ -130,14 +167,17 @@ module chip_top import prim_util_pkg::*; (
 
       function automatic logic [NumDmaDevice-2:0][DmaSourceWidth-1:0] generate_socket_source_base();
         if (EnableEth && EthDmaIdx != 0) generate_socket_source_base[EthDmaIdx - 1] = EthDmaSourceBase;
+        if (EnableDvi && DviDmaIdx != 0) generate_socket_source_base[DviDmaIdx - 1] = DviDmaSourceBase;
       endfunction
 
       function automatic logic [NumDmaDevice-2:0][DmaSourceWidth-1:0] generate_socket_source_mask();
         if (EnableEth && EthDmaIdx != 0) generate_socket_source_mask[EthDmaIdx - 1] = EthDmaSourceMask;
+        if (EnableDvi && DviDmaIdx != 0) generate_socket_source_mask[DviDmaIdx - 1] = DviDmaSourceMask;
       endfunction
 
       function automatic logic [NumDmaDevice-2:0][vbits(NumDmaDevice)-1:0] generate_socket_source_link();
         if (EnableEth && EthDmaIdx != 0) generate_socket_source_link[EthDmaIdx - 1] = EthDmaIdx;
+        if (EnableDvi && DviDmaIdx != 0) generate_socket_source_link[DviDmaIdx - 1] = DviDmaIdx;
       endfunction
 
       tl_socket_m1 #(
@@ -294,7 +334,7 @@ module chip_top import prim_util_pkg::*; (
   // #region IO Switch //
 
   // Exclude the fixed error sink located at offset 0.
-  localparam NumIoDevice = 4 + EnableEth;
+  localparam NumIoDevice = 4 + EnableEth + EnableDvi;
 
   // Error sink located at offset 0.
   localparam ClintIoIdx = 1;
@@ -302,6 +342,7 @@ module chip_top import prim_util_pkg::*; (
   localparam UartIoIdx = 3;
   localparam SdhciIoIdx = 4;
   localparam EthIoIdx = 5;
+  localparam DviIoIdx = EnableEth ? EthIoIdx + 1 : EthIoIdx;
 
   localparam [AddrWidth-1:0] ClintBaseAddr = 'h11400000;
   localparam [AddrWidth-1:0] ClintBaseMask = 'h    FFFF;
@@ -318,6 +359,9 @@ module chip_top import prim_util_pkg::*; (
   localparam [AddrWidth-1:0] EthBaseAddr   = 'h10100000;
   localparam [AddrWidth-1:0] EthBaseMask   = 'h   7FFFF;
 
+  localparam [AddrWidth-1:0] DviBaseAddr   = 'h10020000;
+  localparam [AddrWidth-1:0] DviBaseMask   = 'h     FFF;
+
   `TL_DECLARE_ARR(64, AddrWidth, DeviceSourceWidth, 1, io_ch, [NumIoDevice:0]);
 
   function automatic logic [NumIoDevice-1:0][AddrWidth-1:0] generate_socket_address_base();
@@ -326,6 +370,7 @@ module chip_top import prim_util_pkg::*; (
     generate_socket_address_base[UartIoIdx - 1] = UartBaseAddr;
     generate_socket_address_base[SdhciIoIdx - 1] = SdhciBaseAddr;
     if (EnableEth) generate_socket_address_base[EthIoIdx - 1] = EthBaseAddr;
+    if (EnableDvi) generate_socket_address_base[DviIoIdx - 1] = DviBaseAddr;
   endfunction
 
   function automatic logic [NumIoDevice-1:0][AddrWidth-1:0] generate_socket_address_mask();
@@ -334,6 +379,7 @@ module chip_top import prim_util_pkg::*; (
     generate_socket_address_mask[UartIoIdx - 1] = UartBaseMask;
     generate_socket_address_mask[SdhciIoIdx - 1] = SdhciBaseMask;
     if (EnableEth) generate_socket_address_mask[EthIoIdx - 1] = EthBaseMask;
+    if (EnableDvi) generate_socket_address_mask[DviIoIdx - 1] = DviBaseMask;
   endfunction
 
   function automatic logic [NumIoDevice-1:0][vbits(NumIoDevice+1)-1:0] generate_socket_address_link();
@@ -342,6 +388,7 @@ module chip_top import prim_util_pkg::*; (
     generate_socket_address_link[UartIoIdx - 1] = UartIoIdx;
     generate_socket_address_link[SdhciIoIdx - 1] = SdhciIoIdx;
     if (EnableEth) generate_socket_address_link[EthIoIdx - 1] = EthIoIdx;
+    if (EnableDvi) generate_socket_address_link[DviIoIdx - 1] = DviIoIdx;
   endfunction
 
   tl_socket_1n #(
@@ -591,6 +638,79 @@ module chip_top import prim_util_pkg::*; (
   //   assign phy_rst_n = 1'bz;
 
   // end
+
+  // #endregion
+  //////////////////////
+
+  /////////////////////
+  // #region Display //
+
+  if (EnableDvi) begin: dvi
+
+    `TL_DECLARE(32, 12, DeviceSourceWidth, 1, dvi_io);
+
+    dvi #(
+      .IoAddrWidth (12),
+      .IoSourceWidth (DeviceSourceWidth),
+      .DmaDataWidth (128),
+      .DmaAddrWidth (AddrWidth),
+      .DmaSourceWidth (DviDmaSourceWidth),
+      .DmaSinkWidth (SinkWidth)
+    ) dvi (
+      .clk_i (clk),
+      .rst_ni (rstn),
+      .io_clk_i (io_clk),
+      .hdmi_tx_clk_p,
+      .hdmi_tx_clk_n,
+      .hdmi_tx_p,
+      .hdmi_tx_n,
+      `TL_CONNECT_DEVICE_PORT(io, dvi_io),
+      `TL_CONNECT_HOST_PORT(dma, dma_dvi)
+    );
+
+    tl_adapter #(
+      .HostDataWidth (64),
+      .DeviceDataWidth (32),
+      .HostAddrWidth (AddrWidth),
+      .DeviceAddrWidth (12),
+      .HostSourceWidth (DeviceSourceWidth),
+      .DeviceSourceWidth (DeviceSourceWidth),
+      .HostSinkWidth (1),
+      .DeviceSinkWidth (1),
+      .HostMaxSize (3),
+      .DeviceMaxSize (2),
+      .HostFifo (1'b0),
+      .DeviceFifo (1'b1)
+    ) dvi_io_adapter (
+      .clk_i (clk),
+      .rst_ni (rstn),
+      `TL_CONNECT_DEVICE_PORT_IDX(host, io_ch, [DviIoIdx]),
+      `TL_CONNECT_HOST_PORT(device, dvi_io)
+    );
+
+  end else begin: dummy_dvi
+
+    OBUFTDS #(
+      .IOSTANDARD ("TMDS_33")
+    ) clk_buf (
+      .I (1'b0),
+      .T (1'b1),
+      .O (hdmi_tx_clk_p),
+      .OB (hdmi_tx_clk_n)
+    );
+
+    for (genvar i = 0; i < 3; i++) begin
+      OBUFTDS #(
+        .IOSTANDARD ("TMDS_33")
+      ) data_buf (
+        .I (1'b0),
+        .T (1'b1),
+        .O (hdmi_tx_p[i]),
+        .OB (hdmi_tx_n[i])
+      );
+    end
+
+  end
 
   // #endregion
   //////////////////////
