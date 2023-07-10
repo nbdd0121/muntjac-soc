@@ -481,7 +481,7 @@ module chip_top import prim_util_pkg::*; (
     `TL_CONNECT_DEVICE_PORT(link, uart_tl),
     .irq_o (irq_uart)
   );
-  
+
   tl_adapter #(
     .HostDataWidth (64),
     .DeviceDataWidth (32),
@@ -504,7 +504,7 @@ module chip_top import prim_util_pkg::*; (
 
   // #endregion
   //////////////////
-  
+
   ///////////////////
   // #region SDHCI //
 
@@ -527,7 +527,7 @@ module chip_top import prim_util_pkg::*; (
     `TL_CONNECT_DEVICE_PORT(link, sdhci_tl),
     .irq_o (irq_sd)
   );
-  
+
   tl_adapter #(
     .HostDataWidth (64),
     .DeviceDataWidth (32),

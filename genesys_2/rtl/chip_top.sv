@@ -63,6 +63,8 @@ module chip_top import prim_util_pkg::*; (
   localparam EnableEth = 1'b1;
   localparam EnableDvi = 1'b0;
 
+  localparam DviDmaSourceWidth = 2;
+
   localparam AddrWidth = 38;
   localparam DmaSourceWidth = 3;
   localparam HostSourceWidth = 2;
@@ -89,7 +91,7 @@ module chip_top import prim_util_pkg::*; (
   localparam logic [DmaSourceWidth-1:0] EthDmaSourceMask = 3;
   localparam logic [DmaSourceWidth-1:0] EthDmaSourceBase = 0;
 
-  localparam logic [DmaSourceWidth-1:0] DviDmaSourceMask = 3;
+  localparam logic [DmaSourceWidth-1:0] DviDmaSourceMask = (1 << DviDmaSourceWidth) - 1;
   localparam logic [DmaSourceWidth-1:0] DviDmaSourceBase =
     ((EnableEth ? EthDmaSourceBase + EthDmaSourceMask + 1 : EthDmaSourceBase) + DviDmaSourceMask) &~ DviDmaSourceMask;
 
@@ -98,7 +100,7 @@ module chip_top import prim_util_pkg::*; (
   end
 
   `TL_DECLARE(128, AddrWidth, 2, SinkWidth, dma_eth);
-  `TL_DECLARE(128, AddrWidth, 2, SinkWidth, dma_dvi);
+  `TL_DECLARE(128, AddrWidth, DviDmaSourceWidth, SinkWidth, dma_dvi);
 
   if (NumDmaDevice == 0) begin: dummy_dma
 
@@ -137,7 +139,7 @@ module chip_top import prim_util_pkg::*; (
         .DataWidth (128),
         .AddrWidth (AddrWidth),
         .SinkWidth (SinkWidth),
-        .HostSourceWidth (2),
+        .HostSourceWidth (DviDmaSourceWidth),
         .DeviceSourceWidth (DmaSourceWidth),
         .SourceBase (DviDmaSourceBase),
         .SourceMask (DviDmaSourceMask)
@@ -708,7 +710,7 @@ module chip_top import prim_util_pkg::*; (
       .IoSourceWidth (DeviceSourceWidth),
       .DmaDataWidth (128),
       .DmaAddrWidth (AddrWidth),
-      .DmaSourceWidth (2),
+      .DmaSourceWidth (DviDmaSourceWidth),
       .DmaSinkWidth (SinkWidth)
     ) dvi (
       .clk_i (clk),
