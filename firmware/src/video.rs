@@ -124,11 +124,11 @@ pub fn init() {
             reg(CR_FB_BASE) as *mut usize,
             crate::address::FRAMEBUFFER_BASE,
         );
-        core::ptr::write_volatile(reg(CR_FB_WIDTH), 1920);
-        core::ptr::write_volatile(reg(CR_FB_HEIGHT), 1080);
-        // a8b8g8r8
-        core::ptr::write_volatile(reg(CR_FB_DEPTH), 0);
-        core::ptr::write_volatile(reg(CR_FB_BPL), 1920 * 4);
+        core::ptr::write_volatile(reg(CR_FB_WIDTH), 1280);
+        core::ptr::write_volatile(reg(CR_FB_HEIGHT), 720);
+        // r5g6b5
+        core::ptr::write_volatile(reg(CR_FB_DEPTH), 1);
+        core::ptr::write_volatile(reg(CR_FB_BPL), 1280 * 2);
         core::ptr::write_volatile(reg(CR_FB_COMMIT), 1);
     }
 
