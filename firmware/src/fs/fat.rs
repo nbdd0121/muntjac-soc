@@ -178,7 +178,7 @@ impl<'a> Iterator for Dir<'a> {
                 continue;
             }
 
-            let mut filename = arrayvec::ArrayString::<[u8; 768]>::new();
+            let mut filename = arrayvec::ArrayString::<768>::new();
 
             if lfn[0] == 0 {
                 let lowercase = entry[12] & 0x08 != 0;
@@ -226,7 +226,7 @@ impl<'a> Iterator for Dir<'a> {
 
 pub struct DirEntry<'a> {
     fs: &'a FileSystem,
-    name: arrayvec::ArrayString<[u8; 768]>,
+    name: arrayvec::ArrayString<768>,
     cluster: u32,
     size: usize,
     dir: bool,
