@@ -13,10 +13,13 @@ The SoC contains the following components out of the box:
 * DDR memory controller[^1]
 * UART 16550[^1]
 * SD card controller
+* PS/2 controller[^3]
 * *(optional)* Ethernet controller[^2]
+* *(optional)* Display controller[^3]
 
 [^1]: Xilinx IP that comes with Vivado, but not open source
 [^2]: Xilinx IP, not open source, separate license required
+[^3]: For Nexys Video and Genesys 2 boards only
 
 ## Supported Targets
 
