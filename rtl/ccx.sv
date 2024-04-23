@@ -292,7 +292,7 @@ module ccx import muntjac_pkg::*; #(
     .SourceBase (generate_llc_source_base()),
     .SourceMask (generate_llc_source_mask()),
     .EnableHpm (EnableHpm)
-  ) inst (
+  ) llc_inst (
     .clk_i,
     .rst_ni,
     .hpm_acq_count_o (hpm_acq_count),

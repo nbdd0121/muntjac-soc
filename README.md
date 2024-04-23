@@ -2,7 +2,7 @@
 
 This repository contains a simple SoC that builds upon [muntjac](https://github.com/lowRISC/muntjac) that can be used out-of-the-box.
 
-For a detailed walkthough about how to build/use this project, please check the [tutorial](./docs/tutorial.md).
+For a detailed walkthough about how to build/use this project, please check the [tutorial](./docs/tutorial.md). A description of the core complex can be found [here](./docs/ccx_architecture.md).
 
 ## Components
 
