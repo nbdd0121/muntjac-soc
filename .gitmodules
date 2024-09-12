@@ -7,7 +7,7 @@
 [submodule "linux"]
 	path = linux
 	url = git@github.com:nbdd0121/linux.git
-	branch = riscv
+	branch = muntjac-6.1
 	shallow = true
 [submodule "display_controller"]
 	path = display_controller
