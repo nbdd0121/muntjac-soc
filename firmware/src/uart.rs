@@ -16,10 +16,11 @@ pub fn uart_init() {
     unsafe {
         core::ptr::write_volatile(reg(UART_FCR), 0b111);
     }
-    // Set baud to 256,000 8N1
-    // 40M / (16 * 256000) ~= 10
+
+    // Set baud to 230,400 8N1
+    // 18.432M / (16 * 230,400) = 5
     uart_set_mode(Config {
-        divisor: 10,
+        divisor: 5,
         lcr: 0b11,
     });
 }

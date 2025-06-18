@@ -119,6 +119,12 @@ fn load_kernel() -> alloc::vec::Vec<u8> {
     let size = kernel.size() as usize;
 
     println!("Loading kernel, size = {}KiB", size / 1024);
+
+    // Some sanity checks
+    if size < 128 {
+        println!("Size is too small, rejecting. Please check kernel is valid.");
+    }
+
     let mut buffer = alloc::vec::Vec::with_capacity(size);
     unsafe { buffer.set_len(size) };
     let time = timer::time();
@@ -152,13 +158,6 @@ extern "C" fn main(boot: bool) -> usize {
         uart::uart_init();
         fmt::logger_init();
 
-        // Set baud to 230,400 8N1
-        // 18.432M / (16 * 230,400) = 5
-        uart::uart_set_mode(uart::Config {
-            divisor: 5,
-            lcr: 0b11,
-        });
-
         #[cfg(has_display)]
         video::init();
 
@@ -170,6 +169,7 @@ extern "C" fn main(boot: bool) -> usize {
         ipi::probe_hart_count();
         allocator::init();
 
+        #[allow(unused_mut)]
         let mut kernel_memory_end = address::MEMORY_BASE + address::MEMORY_SIZE - 0x200000;
         #[cfg(has_display)]
         {
