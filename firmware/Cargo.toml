@@ -19,7 +19,7 @@ buddy = { git = "https://github.com/nbdd0121/buddy.git" }
 ro_cell = "0.1"
 spin = "0.9"
 log = { version = "0.4", default-features = false }
-unwinding = { version = "0.2.2", default-features = false, features = ["unwinder", "personality", "fde-gnu-eh-frame-hdr", "panicking"] }
+unwinding = { version = "0.2.7", default-features = false, features = ["unwinder", "personality", "fde-gnu-eh-frame-hdr", "panicking"] }
 psf2 = { version = "0.4", default-features = false, optional = true }
 
 [features]
